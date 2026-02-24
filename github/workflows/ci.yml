@@ -1,0 +1,118 @@
+name: PNG Property Dashboard CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend Tests ─────────────────────────────────────────────────────────
+  backend-test:
+    name: Backend — Python Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run engine unit tests
+        working-directory: backend
+        run: |
+          python -c "
+          from png_scraper.engine import normalise_price, detect_suburb, classify_type, make_listing
+          from png_scraper.market_scorer import score_market_value
+
+          # Price normaliser
+          assert normalise_price('K2,500/month')[0] == 2500
+          assert normalise_price('500 kina per week')[0] == 2167
+          assert normalise_price('PGK1200 a fortnight')[0] == 2600
+          assert normalise_price('K12,000 per year')[0] == 1000
+
+          # Suburb detection
+          assert detect_suburb('flat in Boroko NCD') == 'Boroko'
+          assert detect_suburb('Tokerara area') == 'Tokarara'
+
+          # Market scorer
+          r = score_market_value(1800, 'Boroko', 'House')
+          assert r.label.value == 'Deal'
+          r2 = score_market_value(5000, 'Boroko', 'House')
+          assert r2.label.value == 'Overpriced'
+
+          print('All backend tests passed.')
+          "
+
+  # ── Frontend Build ────────────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend — Vite Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package.json
+
+      - name: Install & build
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+  # ── Docker Build ──────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker — Compose Build Check
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy env file
+        run: cp .env.example .env
+
+      - name: Docker Compose build (no push)
+        run: docker compose build
+
+  # ── Deploy (main branch only) ─────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy backend to Railway
+        # Uncomment and configure for real deployment:
+        # uses: bervProject/railway-deploy@main
+        # with:
+        #   railway_token: ${{ secrets.RAILWAY_TOKEN }}
+        #   service: api
+        run: echo "Deploy step — configure Railway/Render secrets in repo settings"
+
+      - name: Deploy frontend to Vercel
+        # Uncomment for real deployment:
+        # uses: amondnet/vercel-action@v25
+        # with:
+        #   vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        #   vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        #   vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        #   working-directory: frontend
+        run: echo "Deploy step — configure Vercel secrets in repo settings"
