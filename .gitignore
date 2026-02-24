@@ -1,0 +1,56 @@
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.pyc
+
+# ── Virtual envs ─────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment & secrets ────────────────────────────────────
+.env
+.env.local
+.env.*.local
+fb_session.json
+*.pem
+*.key
+
+# ── Node / Frontend ──────────────────────────────────────────
+node_modules/
+dist/
+.npm
+*.tsbuildinfo
+
+# ── Scraper output data ──────────────────────────────────────
+backend/output/*.json
+backend/output/*.csv
+!backend/output/.gitkeep
+
+# ── Playwright ───────────────────────────────────────────────
+screenshots/
+.playwright/
+
+# ── IDEs ─────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Docker ───────────────────────────────────────────────────
+.docker/
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
