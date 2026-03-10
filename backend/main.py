@@ -135,6 +135,7 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
+@app.get("/")
 @app.get("/api/health")
 @app.get("/api")
 @app.get("/api/")
