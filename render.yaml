@@ -60,7 +60,12 @@ services:
         value: public, max-age=31536000, immutable
 
     routes:
-      # SPA fallback — all non-asset routes serve index.html
+      # Root serves the marketing landing page
+      - type: rewrite
+        source: /
+        destination: /landing.html
+
+      # SPA fallback — all non-asset routes serve index.html (React dashboard)
       - type: rewrite
         source: /*
         destination: /index.html
