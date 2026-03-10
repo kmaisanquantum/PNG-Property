@@ -7,11 +7,14 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install dependencies
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
-COPY . .
+COPY backend/ .
+
+# Ensure output directory exists
+RUN mkdir -p output
 
 # Expose the port the app runs on
 EXPOSE 8000
