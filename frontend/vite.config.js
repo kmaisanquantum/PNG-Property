@@ -28,6 +28,10 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       sourcemap: false,
       rollupOptions: {
+        input: {
+          main: 'index.html',
+          dashboard: 'dashboard.html',
+        },
         output: {
           // Split React into its own chunk for better caching
           manualChunks: {

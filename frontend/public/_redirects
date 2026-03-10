@@ -1,6 +1,6 @@
 # Render Static Site — Routing rules
-# Root path serves the marketing landing page
-/    /landing.html    200
+# Root path serves the marketing landing page (now index.html)
+/    /index.html    200
 
-# All other non-asset routes serve index.html (React dashboard)
-/*   /index.html      200
+# All other non-asset routes serve the React SPA (now dashboard.html)
+/*   /dashboard.html      200
