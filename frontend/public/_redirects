@@ -1,3 +1,6 @@
-# Render Static Site — SPA fallback routing
-# All non-asset routes serve index.html so React Router handles them client-side
-/*    /index.html    200
+# Render Static Site — Routing rules
+# Root path serves the marketing landing page
+/    /landing.html    200
+
+# All other non-asset routes serve index.html (React dashboard)
+/*   /index.html      200

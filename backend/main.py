@@ -135,9 +135,9 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def root_redirect():
-    # Redirect root visitors to the frontend dashboard
+    # Redirect root visitors to the frontend (landing page)
     frontend_url = os.getenv("ALLOWED_ORIGINS", "https://png-property-dashboard.onrender.com")
     return RedirectResponse(url=frontend_url)
 
