@@ -11,7 +11,7 @@ services:
   - type: web
     name: png-property-api
     runtime: docker
-    dockerContext: backend
+    dockerContext: .
     dockerfilePath: backend/Dockerfile
     plan: free                   # upgrade to starter ($7/mo) for always-on
     region: singapore            # closest to PNG
