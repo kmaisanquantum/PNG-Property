@@ -12,7 +12,7 @@ from typing import Optional, List
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(message)s")
@@ -136,6 +136,11 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/")
+def root_redirect():
+    # Redirect root visitors to the frontend dashboard
+    frontend_url = os.getenv("ALLOWED_ORIGINS", "https://png-property-dashboard.onrender.com")
+    return RedirectResponse(url=frontend_url)
+
 @app.get("/api/health")
 @app.get("/api")
 @app.get("/api/")
