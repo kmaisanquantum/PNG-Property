@@ -1,0 +1,37 @@
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Secrets ───────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+fb_session.json
+*.pem
+*.key
+
+# ── Node ──────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+
+# ── Scraper output (store in MongoDB, not git) ────────────────
+backend/output/*.json
+backend/output/*.csv
+
+# ── IDEs ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/

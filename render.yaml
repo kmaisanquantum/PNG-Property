@@ -1,0 +1,75 @@
+# render.yaml — Render Infrastructure Blueprint
+# Declares both services so Render can deploy the full stack
+# from one GitHub repo with one click.
+#
+# Usage: Render Dashboard → New → Blueprint → connect this repo
+# Render reads this file automatically.
+
+services:
+
+  # ── Backend: FastAPI Web Service ──────────────────────────────────────────
+  - type: web
+    name: png-property-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free                   # upgrade to starter ($7/mo) for always-on
+    region: singapore            # closest to PNG
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+      - key: PORT
+        value: "8000"
+      - key: MONGODB_URL
+        sync: false              # set manually in Render dashboard
+      - key: REDIS_URL
+        sync: false
+      - key: FB_EMAIL
+        sync: false
+      - key: FB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true      # Render auto-generates a secure value
+      - key: ALLOWED_ORIGINS
+        value: https://png-property-dashboard.onrender.com
+      - key: OUTPUT_FILE
+        value: output/png_listings_latest.json
+
+  # ── Frontend: React Static Site ───────────────────────────────────────────
+  - type: web
+    name: png-property-dashboard
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: true
+    autoDeploy: true
+
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+
+    routes:
+      # SPA fallback — all non-asset routes serve index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+    envVars:
+      - key: NODE_VERSION
+        value: "20.11.0"
+      - key: VITE_API_URL
+        # Set this to your backend URL after first deploy, e.g.:
+        # https://png-property-api.onrender.com
+        value: https://png-property-api.onrender.com
