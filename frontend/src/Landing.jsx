@@ -49,6 +49,7 @@ const Landing = ({ onEnterDashboard }) => {
           font-family: var(--font-b);
           line-height: 1.6;
           overflow-x: hidden;
+          min-height: 100vh;
         }
 
         @keyframes fadeUp   { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:none; } }

@@ -72,9 +72,9 @@ const C = {
 
 // ── FONTS ─────────────────────────────────────────────────────────────────────
 const FONTS = `
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Barlow:wght@400;500;600&family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: ${C.bg0}; color: ${C.text0}; font-family: 'Barlow', sans-serif; }
+body { background: ${C.bg0}; color: ${C.text0}; font-family: 'Barlow', sans-serif; overflow-x: hidden; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: ${C.bg1}; }
 ::-webkit-scrollbar-thumb { background: ${C.border}; border-radius: 2px; }
@@ -724,13 +724,12 @@ export default function App() {
 
   useEffect(()=>{loadAll();},[loadAll]);
 
-  if (!showDashboard) {
-    return <Landing onEnterDashboard={() => setShowDashboard(true)} />;
-  }
-
   return (
     <>
       <style>{FONTS}</style>
+      {!showDashboard ? (
+        <Landing onEnterDashboard={() => setShowDashboard(true)} />
+      ) : (
       <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
@@ -744,6 +743,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      )}
       {showScrape&&<ScrapePanel onClose={()=>setShowScrape(false)}/>}
     </>
   );
