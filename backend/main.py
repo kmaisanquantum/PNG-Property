@@ -137,9 +137,8 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
 
 @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def root_redirect():
-    # Redirect root visitors to the frontend (landing page)
-    frontend_url = os.getenv("ALLOWED_ORIGINS", "https://png-property-dashboard.onrender.com").split(",")[0].strip()
-    return RedirectResponse(url=frontend_url)
+    # Redirect root visitors to api docs by default (frontend is separate)
+    return RedirectResponse(url="/api/docs")
 
 @app.get("/api/health")
 @app.get("/api")

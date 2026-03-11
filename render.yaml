@@ -39,9 +39,8 @@ services:
         value: output/png_listings_latest.json
 
   # ── Frontend: React Static Site ───────────────────────────────────────────
-  - type: web
+  - type: static
     name: png-property-dashboard
-    runtime: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
