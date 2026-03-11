@@ -30,7 +30,6 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: 'index.html',
-          dashboard: 'dashboard.html',
         },
         output: {
           // Split React into its own chunk for better caching

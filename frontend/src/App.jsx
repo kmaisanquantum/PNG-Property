@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import Landing from "./Landing";
 
 // ── API BASE ──────────────────────────────────────────────────────────────────
 // Render: VITE_API_URL is set to the backend Web Service URL in Render dashboard
@@ -699,6 +700,7 @@ function FlagsView() {
 
 // ── APP ROOT ──────────────────────────────────────────────────────────────────
 export default function App() {
+  const [showDashboard, setShowDashboard] = useState(false);
   const [view,setView]=useState("dashboard");
   const [showScrape,setShowScrape]=useState(false);
   const [overview,setOverview]=useState(null);
@@ -709,6 +711,7 @@ export default function App() {
   const [loading,setLoading]=useState(true);
 
   const loadAll=useCallback(async()=>{
+    if (!showDashboard) return;
     setLoading(true);
     const [ov,hm,tr,s,sr]=await Promise.all([
       apiFetch("/analytics/overview"),apiFetch("/analytics/heatmap"),
@@ -717,9 +720,13 @@ export default function App() {
     setOverview(ov||MOCK_OVERVIEW); setHeatmap(hm||MOCK_HEATMAP);
     setTrends(tr||MOCK_TRENDS); setSd(s||MOCK_SD); setSources(sr||MOCK_SOURCES);
     setLoading(false);
-  },[]);
+  },[showDashboard]);
 
   useEffect(()=>{loadAll();},[loadAll]);
+
+  if (!showDashboard) {
+    return <Landing onEnterDashboard={() => setShowDashboard(true)} />;
+  }
 
   return (
     <>
