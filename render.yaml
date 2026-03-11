@@ -11,7 +11,7 @@ services:
   - type: web
     name: png-property-api
     runtime: docker
-    dockerContext: .
+    dockerContext: backend
     dockerfilePath: backend/Dockerfile
     plan: free                   # upgrade to starter ($7/mo) for always-on
     region: singapore            # closest to PNG
@@ -19,8 +19,6 @@ services:
     autoDeploy: true
 
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.12.0"
       - key: PORT
         value: "8000"
       - key: MONGODB_URL

@@ -7,11 +7,12 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install dependencies
-COPY backend/requirements.txt .
+# Paths are now relative to the 'backend' directory
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application
-COPY backend/ .
+COPY . .
 
 # Ensure output directory exists
 RUN mkdir -p output
