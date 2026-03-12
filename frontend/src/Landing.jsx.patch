@@ -1,0 +1,27 @@
+<<<<<<< SEARCH
+      <nav>
+        <a href="#" className="nav-logo">PNG<span className="dot">●</span>PROPERTY</a>
+        <div className="nav-links">
+          <a href="#features">Features</a>
+          <a href="#suburbs">Heatmap</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div className="nav-cta">
+          <button className="btn-ghost" onClick={onEnterDashboard}>Sign In</button>
+          <button className="btn-primary" onClick={onEnterDashboard}>Get Access →</button>
+        </div>
+      </nav>
+=======
+      <nav>
+        <a href="#" className="nav-logo">PNG<span className="dot">●</span>PROPERTY</a>
+        <div className="nav-links">
+          <a href="#features">Features</a>
+          <a href="#suburbs">Heatmap</a>
+          <a href="#pricing">Pricing</a>
+        </div>
+        <div className="nav-cta">
+          <button className="btn-ghost" onClick={() => setShowAuth(true)}>Sign In</button>
+          <button className="btn-primary" onClick={() => setShowAuth(true)}>Get Access →</button>
+        </div>
+      </nav>
+>>>>>>> REPLACE

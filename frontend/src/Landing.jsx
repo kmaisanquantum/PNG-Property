@@ -1,46 +1,89 @@
 import React, { useEffect, useState } from 'react';
 
 const Landing = ({ onEnterDashboard }) => {
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('visible');
-          // Note: animateCounter logic would need to be ported if used
-          observer.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.15 });
+  const [showAuth, setShowAuth] = useState(false);
 
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  useEffect(() => {
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(r => observer.observe(r));
     return () => observer.disconnect();
   }, []);
 
-  const [authModal, setAuthModal] = useState(null); // 'login' | 'register' | null
+  const AuthModal = () => (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 2000,
+      background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+    }} onClick={() => setShowAuth(false)}>
+      <div style={{
+        background: 'var(--bg1)', border: '1px solid var(--border)',
+        borderRadius: '24px', padding: '40px', maxWidth: '400px', width: '100%',
+        boxShadow: '0 32px 64px rgba(0,0,0,0.5)', position: 'relative'
+      }} onClick={e => e.stopPropagation()}>
+        <button style={{
+          position: 'absolute', top: '20px', right: '20px', background: 'none',
+          border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
+        }} onClick={() => setShowAuth(false)}>✕</button>
+
+        <h2 style={{fontFamily: 'var(--font-d)', fontSize: '28px', marginBottom: '8px', textAlign: 'center'}}>GET ACCESS</h2>
+        <p style={{fontSize: '14px', color: 'var(--text2)', textAlign: 'center', marginBottom: '32px'}}>Sign up to access real-time property intelligence.</p>
+
+        <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+          <AuthButton icon="🌐" label="Continue with Google" onClick={onEnterDashboard} />
+          <AuthButton icon="📘" label="Continue with Facebook" onClick={onEnterDashboard} />
+          <AuthButton icon="📧" label="Continue with Email" onClick={onEnterDashboard} />
+          <AuthButton icon="📱" label="Continue with Phone" onClick={onEnterDashboard} />
+          <AuthButton icon="💬" label="Continue with WhatsApp" color="#25D366" onClick={onEnterDashboard} />
+        </div>
+
+        <div style={{marginTop: '24px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
+          By continuing, you agree to our <a href="#" style={{color: 'var(--teal)'}}>Terms of Service</a>.
+        </div>
+      </div>
+    </div>
+  );
+
+  const AuthButton = ({ icon, label, onClick, color }) => (
+    <button style={{
+      display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
+      padding: '14px 20px', background: 'var(--bg2)', border: '1px solid var(--border)',
+      borderRadius: '12px', color: 'var(--text1)', fontSize: '14px', fontWeight: '600',
+      cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
+    }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = color || 'var(--teal)'; e.currentTarget.style.color = 'var(--text0)'; }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text1)'; }}
+    onClick={onClick}>
+      <span style={{fontSize: '18px'}}>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
 
   return (
     <div className="landing-container">
       <style>{`
         :root {
-          --bg:       #080f14;
-          --bg1:      #0c1820;
-          --bg2:      #111f2b;
-          --bg3:      #172737;
-          --border:   #1a3040;
-          --teal:     #0eb5b0;
-          --teal2:    #07e8c4;
-          --earth:    #c4742a;
-          --earth2:   #e8943a;
-          --green:    #2db87a;
-          --red:      #e05252;
-          --text0:    #f2f7fa;
-          --text1:    #8db0c5;
-          --text2:    #3d6478;
-          --text3:    #1e3a4a;
-          --font-d:   'Bebas Neue', sans-serif;
-          --font-s:   'Fraunces', serif;
-          --font-b:   'DM Sans', sans-serif;
-          --font-m:   'DM Mono', monospace;
+          --bg: #080f14;
+          --bg1: #0d161d;
+          --bg2: #141f28;
+          --border: #1e2d38;
+          --text0: #ffffff;
+          --text1: #a0aec0;
+          --text2: #718096;
+          --teal: #0eb5b0;
+          --amber: #f59e0b;
+          --violet: #8b5cf6;
+          --red: #ef4444;
+          --green: #10b981;
+          --earth1: #c4742a;
+          --earth2: #8b4513;
+          --font-d: 'Barlow Condensed', sans-serif;
+          --font-b: 'Inter', sans-serif;
+          --font-s: 'Source Serif 4', serif;
         }
 
         .landing-container {
@@ -80,6 +123,8 @@ const Landing = ({ onEnterDashboard }) => {
           transition: color .2s;
         }
         .nav-links a:hover { color: var(--text0); }
+
+        .nav-cta { display: flex; align-items: center; gap: 12px; }
 
         .btn-ghost {
           background: none; border: 1px solid var(--border);
@@ -203,8 +248,8 @@ const Landing = ({ onEnterDashboard }) => {
           <a href="#pricing">Pricing</a>
         </div>
         <div className="nav-cta">
-          <button className="btn-ghost" onClick={onEnterDashboard}>Sign In</button>
-          <button className="btn-primary" onClick={onEnterDashboard}>Get Access →</button>
+          <button className="btn-ghost" onClick={() => setShowAuth(true)}>Sign In</button>
+          <button className="btn-primary" onClick={() => setShowAuth(true)}>Get Access →</button>
         </div>
       </nav>
 
@@ -221,7 +266,7 @@ const Landing = ({ onEnterDashboard }) => {
             Aggregated listings from Hausples, The Professionals, Ray White, Century 21 and Facebook — normalised, scored, and delivered as actionable analytics for PNG's property market.
           </p>
           <div className="hero-actions">
-            <button className="btn-hero-primary" onClick={onEnterDashboard}>
+            <button className="btn-hero-primary" onClick={() => setShowAuth(true)}>
               <span>Enter Dashboard</span> <span>→</span>
             </button>
           </div>
@@ -274,6 +319,8 @@ const Landing = ({ onEnterDashboard }) => {
       <footer style={{padding: '40px 72px', borderTop: '1px solid var(--border)', textAlign: 'center'}}>
         <p>© 2025 PNG Property Dashboard. Built for Papua New Guinea.</p>
       </footer>
+
+      {showAuth && <AuthModal />}
     </div>
   );
 };
