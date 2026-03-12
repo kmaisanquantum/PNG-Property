@@ -137,7 +137,9 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
 
 @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def root_redirect():
-    # Redirect root visitors to api docs by default (frontend is separate)
+    # Serve index.html if it exists, else redirect to docs
+    if (STATIC_DIR / "index.html").is_file():
+        return FileResponse(str(STATIC_DIR / "index.html"))
     return RedirectResponse(url="/api/docs")
 
 @app.get("/api/health")
@@ -240,9 +242,9 @@ def get_source_list():
 # ── Optional: serve built React SPA from backend (single-service mode) ─────────
 # To enable: cd frontend && npm run build && cp -r dist ../backend/static
 # Then uncomment:
-# STATIC_DIR = Path("static")
-# if STATIC_DIR.is_dir():
-#     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR/"assets")), name="assets")
-#     @app.get("/{full_path:path}", include_in_schema=False)
-#     def spa_fallback(full_path: str):
-#         return FileResponse(str(STATIC_DIR / "index.html"))
+STATIC_DIR = Path("static")
+if STATIC_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR/"assets")), name="assets")
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa_fallback(full_path: str):
+        return FileResponse(str(STATIC_DIR / "index.html"))
