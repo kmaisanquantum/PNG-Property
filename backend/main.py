@@ -37,6 +37,7 @@ app.add_middleware(
 scrape_jobs: dict[str, dict] = {}
 OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", "output/png_listings_latest.json"))
 
+STATIC_DIR = Path("static")
 SUBURB_COORDS = {
     "Waigani":{"lat":-9.4298,"lng":147.1812},"Boroko":{"lat":-9.4453,"lng":147.1769},
     "Gerehu":{"lat":-9.4736,"lng":147.1609},"Gordons":{"lat":-9.4201,"lng":147.1739},
@@ -242,7 +243,8 @@ def get_source_list():
 # ── Optional: serve built React SPA from backend (single-service mode) ─────────
 # To enable: cd frontend && npm run build && cp -r dist ../backend/static
 # Then uncomment:
-STATIC_DIR = Path("static")
+
+# ── serve built React SPA from backend (single-service mode) ─────────────────
 if STATIC_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR/"assets")), name="assets")
     @app.get("/{full_path:path}", include_in_schema=False)
