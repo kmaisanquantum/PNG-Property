@@ -1,109 +1,21 @@
 import React, { useEffect, useState } from 'react';
 
-const Landing = ({ onEnterDashboard, apiFetch }) => {
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
-  const [identifier, setIdentifier] = useState(''); // email or phone
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState('identify'); // 'identify', 'login', 'signup', 'otp'
+  const AuthButton = ({ icon, label, onClick, color }) => (
+    <button style={{
+      display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
+      padding: '14px 20px', background: 'var(--bg2)', border: '1px solid var(--border)',
+      borderRadius: '12px', color: 'var(--text1)', fontSize: '14px', fontWeight: '600',
+      cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
+    }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = color || 'var(--teal)'; e.currentTarget.style.color = 'var(--text0)'; }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text1)'; }}
+    onClick={onClick}>
+      <span style={{fontSize: '18px'}}>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
 
-  useEffect(() => {
-    const reveals = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) entry.target.classList.add('visible');
-      });
-    }, { threshold: 0.1 });
-    reveals.forEach(r => observer.observe(r));
-    return () => observer.disconnect();
-  }, []);
-
-  const handleIdentify = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const data = await apiFetch(`/auth/check-identifier?q=${encodeURIComponent(identifier)}`);
-      if (data) {
-        if (data.exists) {
-           // If provider is not email, we should ideally trigger that provider's flow
-           // But for simulation, we'll just go to password if it's email, or OTP if phone
-           if (identifier.includes('@')) setStep('login');
-           else setStep('otp');
-        } else {
-           setStep('signup');
-        }
-      }
-    } catch (err) {
-      setError('Connection error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      if (step === 'login') {
-        const formData = new URLSearchParams();
-        formData.append('username', identifier);
-        formData.append('password', password);
-
-        const data = await apiFetch('/auth/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData.toString()
-        });
-
-        if (data && data.access_token) onEnterDashboard(data);
-        else setError('Invalid credentials');
-      } else if (step === 'signup') {
-        const data = await apiFetch('/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: identifier.includes('@') ? identifier : undefined,
-            phone: !identifier.includes('@') ? identifier : undefined,
-            password,
-            full_name: fullName
-          })
-        });
-
-        if (data && (data.email || data.phone)) {
-          setStep('login');
-          setError('Account created! Please sign in.');
-        } else setError('Signup failed');
-      } else if (step === 'otp') {
-        // Simulated OTP
-        const data = await apiFetch(`/auth/external?provider=phone&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
-        if (data && data.access_token) onEnterDashboard(data);
-        else setError('Invalid code');
-      }
-    } catch (err) {
-      setError('An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSocialAuth = async (provider) => {
-    setLoading(true);
-    // Simulate social redirect & callback
-    setTimeout(async () => {
-      const id = `social-${Math.random().toString(36).substr(2, 9)}@gmail.com`;
-      const data = await apiFetch(`/auth/external?provider=${provider}&identifier=${id}&name=Social User`, { method: 'POST' });
-      if (data && data.access_token) onEnterDashboard(data);
-      setLoading(false);
-    }, 1000);
-  };
-
-  const AuthModal = () => (
+const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth, handleSocialAuth }) => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
@@ -209,20 +121,110 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
     </div>
   );
 
-  const AuthButton = ({ icon, label, onClick, color }) => (
-    <button style={{
-      display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
-      padding: '14px 20px', background: 'var(--bg2)', border: '1px solid var(--border)',
-      borderRadius: '12px', color: 'var(--text1)', fontSize: '14px', fontWeight: '600',
-      cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
-    }}
-    onMouseEnter={e => { e.currentTarget.style.borderColor = color || 'var(--teal)'; e.currentTarget.style.color = 'var(--text0)'; }}
-    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text1)'; }}
-    onClick={onClick}>
-      <span style={{fontSize: '18px'}}>{icon}</span>
-      <span>{label}</span>
-    </button>
-  );
+const Landing = ({ onEnterDashboard, apiFetch }) => {
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [identifier, setIdentifier] = useState(''); // email or phone
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('identify'); // 'identify', 'login', 'signup', 'otp'
+
+  useEffect(() => {
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(r => observer.observe(r));
+    return () => observer.disconnect();
+  }, []);
+
+  const handleIdentify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await apiFetch(`/auth/check-identifier?q=${encodeURIComponent(identifier)}`);
+      if (data) {
+        if (data.exists) {
+           // If provider is not email, we should ideally trigger that provider's flow
+           // But for simulation, we'll just go to password if it's email, or OTP if phone
+           if (identifier.includes('@')) setStep('login');
+           else setStep('otp');
+        } else {
+           setStep('signup');
+        }
+      }
+    } catch (err) {
+      setError('Connection error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (step === 'login') {
+        const formData = new URLSearchParams();
+        formData.append('username', identifier);
+        formData.append('password', password);
+
+        const data = await apiFetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString()
+        });
+
+        if (data && data.access_token) onEnterDashboard(data);
+        else setError('Invalid credentials');
+      } else if (step === 'signup') {
+        const data = await apiFetch('/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: identifier.includes('@') ? identifier : undefined,
+            phone: !identifier.includes('@') ? identifier : undefined,
+            password,
+            full_name: fullName
+          })
+        });
+
+        if (data && (data.email || data.phone)) {
+          setStep('login');
+          setError('Account created! Please sign in.');
+        } else setError('Signup failed');
+      } else if (step === 'otp') {
+        // Simulated OTP
+        const data = await apiFetch(`/auth/external?provider=phone&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
+        if (data && data.access_token) onEnterDashboard(data);
+        else setError('Invalid code');
+      }
+    } catch (err) {
+      setError('An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialAuth = async (provider) => {
+    setLoading(true);
+    // Simulate social redirect & callback
+    setTimeout(async () => {
+      const id = `social-${Math.random().toString(36).substr(2, 9)}@gmail.com`;
+      const data = await apiFetch(`/auth/external?provider=${provider}&identifier=${id}&name=Social User`, { method: 'POST' });
+      if (data && data.access_token) onEnterDashboard(data);
+      setLoading(false);
+    }, 1000);
+  };
+
+
 
   return (
     <div className="landing-container">
@@ -481,7 +483,16 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         <p>© 2026 PNG Property Intelligence Dashboard. Built for Papua New Guinea by <a href="https://www.dspng.tech" target="_blank" rel="noopener noreferrer" style={{color: 'var(--teal)', textDecoration: 'none', fontWeight: '600'}}>Deeps Systems</a>.</p>
       </footer>
 
-      {showAuth && <AuthModal />}
+      {showAuth && (
+        <AuthModal
+          setShowAuth={setShowAuth} step={step} setStep={setStep}
+          identifier={identifier} setIdentifier={setIdentifier}
+          password={password} setPassword={setPassword}
+          fullName={fullName} setFullName={setFullName}
+          error={error} setError={setError} loading={loading}
+          handleIdentify={handleIdentify} handleAuth={handleAuth} handleSocialAuth={handleSocialAuth}
+        />
+      )}
     </div>
   );
 };
