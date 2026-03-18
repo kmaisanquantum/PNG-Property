@@ -390,7 +390,7 @@ function Topbar({view, overview, onScrape, loading, user}) {
       <div style={{display:"flex",alignItems:"center",gap:14}}>
         <div style={{marginRight:16, textAlign:'right'}}>
            <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
-           <div style={{fontSize:9, color:C.text2}}>{user?.email}</div>
+           <div style={{fontSize:9, color:C.text2}}>{user?.email || user?.phone}</div>
         </div>
         {overview?.last_scraped&&<span style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}

@@ -94,17 +94,21 @@ def _get_db():
         return None
 
 class User(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
     full_name: Optional[str] = None
     disabled: Optional[bool] = None
+    auth_provider: str = "email" # email, google, facebook, phone, whatsapp
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None
     full_name: Optional[str] = None
+    auth_provider: str = "email"
 
 class UserInDB(User):
-    hashed_password: str
+    hashed_password: Optional[str] = None
 
 users_db: dict[str, UserInDB] = {}
 
@@ -133,21 +137,31 @@ def get_user_by_email(email: str) -> Optional[UserInDB]:
     return None
 
 def create_user(user: UserCreate) -> UserInDB:
-    hashed_password = get_password_hash(user.password)
+    hashed_password = get_password_hash(user.password) if user.password else None
     user_in_db = UserInDB(
         email=user.email,
+        phone=user.phone,
         hashed_password=hashed_password,
         full_name=user.full_name,
-        disabled=False
+        disabled=False,
+        auth_provider=user.auth_provider
     )
+
+    identifier = user.email or user.phone
+    if not identifier:
+        raise ValueError("User must have an email or phone number")
 
     # Save to MongoDB if available
     db = _get_db()
     if db is not None:
-        db["users"].update_one({"email": user.email}, {"$set": user_in_db.model_dump()}, upsert=True)
+        db["users"].update_one(
+            {"$or": [{"email": user.email}, {"phone": user.phone}]},
+            {"$set": user_in_db.model_dump()},
+            upsert=True
+        )
 
     # Always keep in memory for immediate access/reliability
-    users_db[user.email] = user_in_db
+    users_db[identifier] = user_in_db
     return user_in_db
 
 @app.on_event("startup")
@@ -279,10 +293,51 @@ def signup(user: UserCreate):
         raise HTTPException(status_code=400, detail="Email already registered")
     return create_user(user)
 
+@app.get("/api/auth/check-identifier")
+def check_identifier(q: str):
+    """Seamless auth: Check if an email or phone already exists."""
+    user = None
+    if "@" in q:
+        user = get_user_by_email(q)
+    else:
+        # Check by phone in memory
+        user = users_db.get(q)
+        if not user:
+            db = _get_db()
+            if db is not None:
+                doc = db["users"].find_one({"phone": q})
+                if doc: user = UserInDB(**doc)
+
+    return {"exists": user is not None, "identifier": q, "provider": user.auth_provider if user else None}
+
+@app.post("/api/auth/external", response_model=Token)
+async def external_auth(provider: str, identifier: str, name: Optional[str] = None):
+    """Simulated Social/OTP Auth."""
+    user = users_db.get(identifier)
+    if not user:
+        # Create new user for social/otp if not exists
+        user_create = UserCreate(
+            email=identifier if "@" in identifier else None,
+            phone=identifier if "@" not in identifier else None,
+            full_name=name or "New User",
+            auth_provider=provider
+        )
+        user = create_user(user_create)
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": identifier}, expires_delta=access_token_expires
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {"email": user.email, "full_name": user.full_name, "phone": user.phone}
+    }
+
 @app.post("/api/auth/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user_by_email(form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not user.hashed_password or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -297,6 +352,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "token_type": "bearer",
         "user": {
             "email": user.email,
+            "phone": user.phone,
             "full_name": user.full_name
         }
     }
