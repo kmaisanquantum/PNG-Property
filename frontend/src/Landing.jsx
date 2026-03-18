@@ -31,8 +31,13 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         if (data.exists) {
            // If provider is not email, we should ideally trigger that provider's flow
            // But for simulation, we'll just go to password if it's email, or OTP if phone
-           if (identifier.includes('@')) setStep('login');
-           else setStep('otp');
+           if (identifier.includes('@')) {
+             setProvider('email');
+             setStep('login');
+           } else {
+             setProvider('phone');
+             setStep('otp');
+           }
         } else {
            setStep('signup');
         }
@@ -64,24 +69,29 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         if (data && data.access_token) onEnterDashboard(data);
         else setError('Invalid credentials');
       } else if (step === 'signup') {
+        if (!identifier.includes('@')) {
+          // For phone signups, we transition to OTP step after name is entered
+          setStep('otp');
+          setLoading(false);
+          return;
+        }
         const data = await apiFetch('/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: identifier.includes('@') ? identifier : undefined,
-            phone: !identifier.includes('@') ? identifier : undefined,
+            email: identifier,
             password,
             full_name: fullName
           })
         });
 
-        if (data && (data.email || data.phone)) {
+        if (data && data.email) {
           setStep('login');
           setError('Account created! Please sign in.');
         } else setError('Signup failed');
       } else if (step === 'otp') {
         // Simulated OTP
-        const data = await apiFetch(`/auth/external?provider=phone&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
+        const data = await apiFetch(`/auth/otp?provider=${provider}&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
         if (data && data.access_token) onEnterDashboard(data);
         else setError('Invalid code');
       }
@@ -99,7 +109,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); }}>
+    }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>
       <div style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
         borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
@@ -108,7 +118,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-        }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); }}>✕</button>
+        }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>✕</button>
 
         {step === 'identify' && (
           <>
@@ -140,8 +150,8 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             </div>
 
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-              <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#25D366" />
-              <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#22c55e" />
+              <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setProvider('whatsapp'); setStep('identify'); }} color="#25D366" />
+              <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setProvider('phone'); setStep('identify'); }} color="#22c55e" />
             </div>
           </>
         )}
@@ -166,17 +176,19 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
                 </div>
               )}
 
-              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
-                  {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
-                </label>
-                <input
-                  type={step === 'otp' ? 'text' : 'password'} required
-                  placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
-                />
-              </div>
+              {(!(step === 'signup' && !identifier.includes('@'))) && (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
+                    {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
+                  </label>
+                  <input
+                    type={step === 'otp' ? 'text' : 'password'} required
+                    placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
+                    value={password} onChange={e => setPassword(e.target.value)}
+                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
+                  />
+                </div>
+              )}
 
               {error && <div style={{color: 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
 
@@ -185,7 +197,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
                 background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
                 fontWeight: '700', cursor: 'pointer'
               }}>
-                {loading ? 'Processing...' : step === 'login' ? 'Sign In' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
+                {loading ? 'Processing...' : step === 'login' ? 'Sign In' : (step === 'signup' && !identifier.includes('@')) ? 'Continue' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
               </button>
             </form>
           </>

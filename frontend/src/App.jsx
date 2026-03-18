@@ -269,7 +269,7 @@ function ListingRow({l}) {
       <td style={{padding:"9px 12px"}}>
         <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600}}>{l.source_site}</span>
       </td>
-      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Social" color={C.text2} small/>}</td>
+      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Unverified" color={C.text2} small/>}</td>
       <td style={{padding:"9px 12px",color:C.text2,fontSize:11}}>{rel(l.scraped_at)}</td>
       <td style={{padding:"9px 12px"}}>{isFlag&&<span style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}</td>
     </tr>
