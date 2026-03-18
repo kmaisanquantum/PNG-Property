@@ -108,7 +108,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>
+    }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); }}>
       <div style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
         borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
@@ -117,7 +117,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-        }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>✕</button>
+        }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); }}>✕</button>
 
         {step === 'identify' && (
           <>

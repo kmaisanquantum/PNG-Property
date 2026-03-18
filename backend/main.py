@@ -125,7 +125,7 @@ def _load_listings() -> list[dict]:
     return _mock_listings()
 
 def get_user_by_email(email: str) -> Optional[UserInDB]:
-    # Check in-memory first (for seeded admin)
+    # Check in-memory first
     if email in users_db:
         return users_db[email]
     # Check MongoDB
@@ -154,14 +154,17 @@ def create_user(user: UserCreate) -> UserInDB:
     # Save to MongoDB if available
     db = _get_db()
     if db is not None:
-        db["users"].update_one(
-            {"$or": [{"email": user.email}, {"phone": user.phone}]},
-            {"$set": user_in_db.model_dump()},
-            upsert=True
-        )
+        try:
+            query = {"$or": []}
+            if user.email: query["$or"].append({"email": user.email})
+            if user.phone: query["$or"].append({"phone": user.phone})
+            db["users"].update_one(query, {"$set": user_in_db.model_dump()}, upsert=True)
+        except Exception as e:
+            log.warning(f"MongoDB save failed: {e}")
 
     # Always keep in memory for immediate access/reliability
-    users_db[identifier] = user_in_db
+    if user.email: users_db[user.email] = user_in_db
+    if user.phone: users_db[user.phone] = user_in_db
     return user_in_db
 
 @app.on_event("startup")
@@ -285,12 +288,14 @@ def health(): return {"service":"PNG Property Intelligence Dashboard API","versi
 
 @app.post("/api/auth/signup", response_model=User)
 def signup(user: UserCreate):
-    db = _get_db()
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database not available")
-    existing_user = get_user_by_email(user.email)
+    identifier = user.email or user.phone
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Identifier (email or phone) is required")
+
+    existing_user = get_user_by_email(user.email) if user.email else users_db.get(user.phone)
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Identifier already registered")
+
     return create_user(user)
 
 @app.get("/api/auth/check-identifier")
@@ -345,7 +350,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email or user.phone}, expires_delta=access_token_expires
     )
     return {
         "access_token": access_token,
