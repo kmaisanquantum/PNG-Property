@@ -1,21 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-  const AuthButton = ({ icon, label, onClick, color }) => (
-    <button style={{
-      display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
-      padding: '14px 20px', background: 'var(--bg2)', border: '1px solid var(--border)',
-      borderRadius: '12px', color: 'var(--text1)', fontSize: '14px', fontWeight: '600',
-      cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
-    }}
-    onMouseEnter={e => { e.currentTarget.style.borderColor = color || 'var(--teal)'; e.currentTarget.style.color = 'var(--text0)'; }}
-    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text1)'; }}
-    onClick={onClick}>
-      <span style={{fontSize: '18px'}}>{icon}</span>
-      <span>{label}</span>
-    </button>
-  );
-
-const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth, handleSocialAuth }) => (
+const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth }) => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
@@ -53,19 +38,6 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
                   {loading ? 'Checking...' : 'Continue'}
                 </button>
             </form>
-
-            <div style={{display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0', opacity: 0.5}}>
-              <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-              <span style={{fontSize: '12px'}}>OR</span>
-              <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-            </div>
-
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-              <AuthButton icon="🌐" label="Google" onClick={() => handleSocialAuth('google')} color="#4285F4" />
-              <AuthButton icon="📘" label="Facebook" onClick={() => handleSocialAuth('facebook')} color="#1877F2" />
-              <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#25D366" />
-              <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#22c55e" />
-            </div>
           </>
         )}
 
@@ -119,7 +91,7 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
         </div>
       </div>
     </div>
-  );
+);
 
 const Landing = ({ onEnterDashboard, apiFetch }) => {
   const [showAuth, setShowAuth] = useState(false);
@@ -150,8 +122,6 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       const data = await apiFetch(`/auth/check-identifier?q=${encodeURIComponent(identifier)}`);
       if (data) {
         if (data.exists) {
-           // If provider is not email, we should ideally trigger that provider's flow
-           // But for simulation, we'll just go to password if it's email, or OTP if phone
            if (identifier.includes('@')) setStep('login');
            else setStep('otp');
         } else {
@@ -201,7 +171,6 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           setError('Account created! Please sign in.');
         } else setError('Signup failed');
       } else if (step === 'otp') {
-        // Simulated OTP
         const data = await apiFetch(`/auth/external?provider=phone&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
         if (data && data.access_token) onEnterDashboard(data);
         else setError('Invalid code');
@@ -212,19 +181,6 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       setLoading(false);
     }
   };
-
-  const handleSocialAuth = async (provider) => {
-    setLoading(true);
-    // Simulate social redirect & callback
-    setTimeout(async () => {
-      const id = `social-${Math.random().toString(36).substr(2, 9)}@gmail.com`;
-      const data = await apiFetch(`/auth/external?provider=${provider}&identifier=${id}&name=Social User`, { method: 'POST' });
-      if (data && data.access_token) onEnterDashboard(data);
-      setLoading(false);
-    }, 1000);
-  };
-
-
 
   return (
     <div className="landing-container">
@@ -490,7 +446,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           password={password} setPassword={setPassword}
           fullName={fullName} setFullName={setFullName}
           error={error} setError={setError} loading={loading}
-          handleIdentify={handleIdentify} handleAuth={handleAuth} handleSocialAuth={handleSocialAuth}
+          handleIdentify={handleIdentify} handleAuth={handleAuth}
         />
       )}
     </div>
