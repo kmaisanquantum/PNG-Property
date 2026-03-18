@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 const Landing = ({ onEnterDashboard, apiFetch }) => {
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState(''); // email or phone
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('identify'); // 'identify', 'login', 'signup', 'otp'
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -20,15 +21,38 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
     return () => observer.disconnect();
   }, []);
 
+  const handleIdentify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await apiFetch(`/auth/check-identifier?q=${encodeURIComponent(identifier)}`);
+      if (data) {
+        if (data.exists) {
+           // If provider is not email, we should ideally trigger that provider's flow
+           // But for simulation, we'll just go to password if it's email, or OTP if phone
+           if (identifier.includes('@')) setStep('login');
+           else setStep('otp');
+        } else {
+           setStep('signup');
+        }
+      }
+    } catch (err) {
+      setError('Connection error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAuth = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      if (authMode === 'login') {
+      if (step === 'login') {
         const formData = new URLSearchParams();
-        formData.append('username', email);
+        formData.append('username', identifier);
         formData.append('password', password);
 
         const data = await apiFetch('/auth/token', {
@@ -37,40 +61,54 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           body: formData.toString()
         });
 
-        if (data && data.access_token) {
-          onEnterDashboard(data);
-        } else {
-          setError('Invalid email or password');
-        }
-      } else {
+        if (data && data.access_token) onEnterDashboard(data);
+        else setError('Invalid credentials');
+      } else if (step === 'signup') {
         const data = await apiFetch('/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password, full_name: fullName })
+          body: JSON.stringify({
+            email: identifier.includes('@') ? identifier : undefined,
+            phone: !identifier.includes('@') ? identifier : undefined,
+            password,
+            full_name: fullName
+          })
         });
 
-        if (data && data.email) {
-          setAuthMode('login');
-          setError('Signup successful! Please sign in.');
-        } else {
-          setError('Signup failed. Email might already be registered.');
-        }
+        if (data && (data.email || data.phone)) {
+          setStep('login');
+          setError('Account created! Please sign in.');
+        } else setError('Signup failed');
+      } else if (step === 'otp') {
+        // Simulated OTP
+        const data = await apiFetch(`/auth/external?provider=phone&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
+        if (data && data.access_token) onEnterDashboard(data);
+        else setError('Invalid code');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('An error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const handleSocialAuth = async (provider) => {
+    setLoading(true);
+    // Simulate social redirect & callback
+    setTimeout(async () => {
+      const id = `social-${Math.random().toString(36).substr(2, 9)}@gmail.com`;
+      const data = await apiFetch(`/auth/external?provider=${provider}&identifier=${id}&name=Social User`, { method: 'POST' });
+      if (data && data.access_token) onEnterDashboard(data);
+      setLoading(false);
+    }, 1000);
+  };
 
   const AuthModal = () => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }} onClick={() => { setShowAuth(false); setShowEmailForm(false); setError(''); }}>
+    }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>
       <div style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
         borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
@@ -79,84 +117,94 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-        }} onClick={() => { setShowAuth(false); setShowEmailForm(false); setError(''); }}>✕</button>
+        }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>✕</button>
 
-        {!showEmailForm ? (
+        {step === 'identify' && (
           <>
             <h2 style={{fontFamily: 'var(--font-d)', fontSize: '32px', marginBottom: '12px', textAlign: 'center', letterSpacing: '0.05em'}}>
               GET ACCESS
             </h2>
-            <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px', maxWidth: '280px', margin: '0 auto 32px'}}>
-              Sign up to access real-time property intelligence.
+            <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px'}}>
+              Enter your email or phone to continue.
             </p>
 
-            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-              <AuthButton icon="🌐" label="Continue with Google" onClick={() => {}} color="#4285F4" />
-              <AuthButton icon="📘" label="Continue with Facebook" onClick={() => {}} color="#1877F2" />
-              <AuthButton icon="📧" label="Continue with Email" onClick={() => setShowEmailForm(true)} color="var(--teal)" />
-              <AuthButton icon="📱" label="Continue with Phone" onClick={() => {}} color="#22c55e" />
-              <AuthButton icon="💬" label="Continue with WhatsApp" onClick={() => {}} color="#25D366" />
+            <form onSubmit={handleIdentify} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px'}}>
+               <input
+                  type="text" required placeholder="Email or Phone number" value={identifier} onChange={e => setIdentifier(e.target.value)}
+                  style={{padding: '14px 18px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '15px'}}
+                />
+                <button type="submit" disabled={loading} style={{
+                  padding: '14px', borderRadius: '12px', border: 'none',
+                  background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
+                  fontWeight: '700', cursor: 'pointer', fontSize: '15px'
+                }}>
+                  {loading ? 'Checking...' : 'Continue'}
+                </button>
+            </form>
+
+            <div style={{display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0', opacity: 0.5}}>
+              <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
+              <span style={{fontSize: '12px'}}>OR</span>
+              <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
             </div>
 
-            <div style={{marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
-              By continuing, you agree to our <a href="#" style={{color: 'var(--teal)', textDecoration: 'underline'}}>Terms of Service</a>.
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+              <AuthButton icon="🌐" label="Google" onClick={() => handleSocialAuth('google')} color="#4285F4" />
+              <AuthButton icon="📘" label="Facebook" onClick={() => handleSocialAuth('facebook')} color="#1877F2" />
+              <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#25D366" />
+              <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#22c55e" />
             </div>
           </>
-        ) : (
+        )}
+
+        {(step === 'login' || step === 'signup' || step === 'otp') && (
           <>
             <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'}}>
-               <button onClick={() => setShowEmailForm(false)} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '18px'}}>←</button>
+               <button onClick={() => setStep('identify')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '18px'}}>←</button>
                <h2 style={{fontFamily: 'var(--font-d)', fontSize: '24px', letterSpacing: '0.02em'}}>
-                 {authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+                 {step === 'login' ? 'WELCOME BACK' : step === 'signup' ? 'CREATE ACCOUNT' : 'VERIFY PHONE'}
                </h2>
             </div>
 
             <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-              {authMode === 'signup' && (
+              {step === 'signup' && (
                 <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700', letterSpacing: '0.05em'}}>FULL NAME</label>
+                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>FULL NAME</label>
                   <input
                     type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '14px'}}
+                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
                   />
                 </div>
               )}
+
               <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700', letterSpacing: '0.05em'}}>EMAIL ADDRESS</label>
+                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
+                  {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
+                </label>
                 <input
-                  type="email" required value={email} onChange={e => setEmail(e.target.value)}
-                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '14px'}}
-                />
-              </div>
-              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700', letterSpacing: '0.05em'}}>PASSWORD</label>
-                <input
-                  type="password" required value={password} onChange={e => setPassword(e.target.value)}
-                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '14px'}}
+                  type={step === 'otp' ? 'text' : 'password'} required
+                  placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
                 />
               </div>
 
-              {error && <div style={{color: error.includes('successful') ? 'var(--green)' : 'var(--red)', fontSize: '13px', textAlign: 'center', padding: '8px', background: 'rgba(239,68,68,0.1)', borderRadius: '8px'}}>{error}</div>}
+              {error && <div style={{color: 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
 
               <button type="submit" disabled={loading} style={{
                 marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
                 background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
-                fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontSize: '15px'
+                fontWeight: '700', cursor: 'pointer'
               }}>
-                {loading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Sign Up'}
+                {loading ? 'Processing...' : step === 'login' ? 'Sign In' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
               </button>
             </form>
-
-            <div style={{marginTop: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text2)'}}>
-              {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
-              <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); }} style={{
-                background: 'none', border: 'none', color: 'var(--teal)', fontWeight: '600', cursor: 'pointer', padding: '0 4px'
-              }}>
-                {authMode === 'login' ? 'Create one' : 'Sign in'}
-              </button>
-            </div>
           </>
         )}
+
+        <div style={{marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
+          By continuing, you agree to our <a href="#" style={{color: 'var(--teal)', textDecoration: 'underline'}}>Terms of Service</a>.
+        </div>
       </div>
     </div>
   );
