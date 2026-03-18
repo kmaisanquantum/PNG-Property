@@ -1,4 +1,4 @@
-# 🏠 PNG Property Dashboard
+# 🏠 PNG Property Intelligence Dashboard
 
 > Papua New Guinea's real-time real estate aggregator, analytics platform, and property intelligence tool.
 > Full-stack deployment on **Render** — FastAPI backend + React frontend.
@@ -209,4 +209,4 @@ Without MongoDB the app works perfectly using the built-in mock data (240 realis
 
 ---
 
-*Built for Papua New Guinea 🇵🇬 — Port Moresby property market intelligence.*
+*Built for Papua New Guinea 🇵🇬 by Deeps Systems — Port Moresby property market intelligence.*

@@ -1,5 +1,5 @@
 """
-backend/main.py — PNG Property Dashboard API
+backend/main.py — PNG Property Intelligence Dashboard API
 FastAPI backend for Render Web Service deployment.
 """
 from __future__ import annotations
@@ -48,7 +48,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 app = FastAPI(
-    title="PNG Property Dashboard API",
+    title="PNG Property Intelligence Dashboard API",
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
@@ -267,7 +267,7 @@ def root_redirect():
 @app.get("/api/health")
 @app.get("/api")
 @app.get("/api/")
-def health(): return {"service":"PNG Property Dashboard API","version":"1.0.0","status":"ok"}
+def health(): return {"service":"PNG Property Intelligence Dashboard API","version":"1.0.0","status":"ok"}
 
 @app.post("/api/auth/signup", response_model=User)
 def signup(user: UserCreate):
