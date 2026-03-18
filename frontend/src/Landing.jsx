@@ -430,7 +430,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       </section>
 
       <footer style={{padding: '40px 72px', borderTop: '1px solid var(--border)', textAlign: 'center'}}>
-        <p>© 2025 PNG Property Dashboard. Built for Papua New Guinea.</p>
+        <p>© 2026 PNG Property Intelligence Dashboard. Built for Papua New Guinea by <a href="https://www.dspng.tech" target="_blank" rel="noopener noreferrer" style={{color: 'var(--teal)', textDecoration: 'none', fontWeight: '600'}}>Deeps Systems</a>.</p>
       </footer>
 
       {showAuth && <AuthModal />}
