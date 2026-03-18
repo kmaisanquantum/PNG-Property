@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(message)s")
 log = logging.getLogger("api")
@@ -25,14 +25,17 @@ SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 43200 # 30 days
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str):
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception as e:
+        log.error(f"Password verification failed: {e}")
+        return False
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def get_password_hash(password: str):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -90,6 +93,21 @@ def _get_db():
         log.warning(f"MongoDB connection failed: {e}")
         return None
 
+class User(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+
+class UserInDB(User):
+    hashed_password: str
+
+users_db: dict[str, UserInDB] = {}
+
 def _load_listings() -> list[dict]:
     db = _get_db()
     if db is not None:
@@ -103,6 +121,10 @@ def _load_listings() -> list[dict]:
     return _mock_listings()
 
 def get_user_by_email(email: str) -> Optional[UserInDB]:
+    # Check in-memory first (for seeded admin)
+    if email in users_db:
+        return users_db[email]
+    # Check MongoDB
     db = _get_db()
     if db is None: return None
     user_doc = db["users"].find_one({"email": email})
@@ -111,8 +133,6 @@ def get_user_by_email(email: str) -> Optional[UserInDB]:
     return None
 
 def create_user(user: UserCreate) -> UserInDB:
-    db = _get_db()
-    if db is None: raise Exception("Database not available")
     hashed_password = get_password_hash(user.password)
     user_in_db = UserInDB(
         email=user.email,
@@ -120,7 +140,14 @@ def create_user(user: UserCreate) -> UserInDB:
         full_name=user.full_name,
         disabled=False
     )
-    db["users"].insert_one(user_in_db.model_dump())
+
+    # Save to MongoDB if available
+    db = _get_db()
+    if db is not None:
+        db["users"].update_one({"email": user.email}, {"$set": user_in_db.model_dump()}, upsert=True)
+
+    # Always keep in memory for immediate access/reliability
+    users_db[user.email] = user_in_db
     return user_in_db
 
 @app.on_event("startup")
@@ -129,14 +156,8 @@ async def startup_event():
     admin_email = "kmaisan@dspng.tech"
     admin_pass = "kilomike@2024"
     try:
-        db = _get_db()
-        if db is not None:
-            existing = db["users"].find_one({"email": admin_email})
-            if not existing:
-                log.info(f"Seeding admin user: {admin_email}")
-                create_user(UserCreate(email=admin_email, password=admin_pass, full_name="Admin User"))
-            else:
-                log.info(f"Admin user {admin_email} already exists")
+        log.info(f"Ensuring admin user: {admin_email}")
+        create_user(UserCreate(email=admin_email, password=admin_pass, full_name="Admin User"))
     except Exception as e:
         log.error(f"Failed to seed admin user: {e}")
 
@@ -201,19 +222,6 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
-
-class User(BaseModel):
-    email: EmailStr
-    full_name: Optional[str] = None
-    disabled: Optional[bool] = None
-
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
-    full_name: Optional[str] = None
-
-class UserInDB(User):
-    hashed_password: str
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     credentials_exception = HTTPException(
@@ -296,7 +304,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.get("/api/listings")
 def get_listings(suburb:Optional[str]=None,source:Optional[str]=None,type:Optional[str]=None,
     min_price:Optional[int]=None,max_price:Optional[int]=None,verified:Optional[bool]=None,
-    sort:str="scraped_at",order:str="desc",page:int=1,limit:int=25):
+    sort:str="scraped_at",order:str="desc",page:int=1,limit:int=25,
+    current_user: User = Depends(get_current_user)):
     ls=_load_listings()
     if suburb: ls=[l for l in ls if (l.get("suburb") or "").lower()==suburb.lower()]
     if source: ls=[l for l in ls if source.lower() in (l.get("source_site") or "").lower()]
@@ -312,7 +321,7 @@ def get_listings(suburb:Optional[str]=None,source:Optional[str]=None,type:Option
     return {"total":total,"page":page,"pages":max(1,(total+limit-1)//limit),"limit":limit,"listings":ls[offset:offset+limit]}
 
 @app.get("/api/analytics/overview")
-def get_overview():
+def get_overview(current_user: User = Depends(get_current_user)):
     ls=_load_listings(); prices=[l["price_monthly_k"] for l in ls if l.get("price_monthly_k")]
     flags=sum(1 for l in ls if l.get("price_monthly_k") and l.get("suburb") and _market_score(l["price_monthly_k"],l["suburb"])["pct_vs_avg"]>=40)
     return {"total_listings":len(ls),"verified_listings":sum(1 for l in ls if l.get("is_verified")),
@@ -323,13 +332,13 @@ def get_overview():
         "last_scraped":max((l.get("scraped_at","") for l in ls),default="Never")}
 
 @app.get("/api/analytics/heatmap")
-def get_heatmap(): return {"suburbs":_suburb_stats(_load_listings())}
+def get_heatmap(current_user: User = Depends(get_current_user)): return {"suburbs":_suburb_stats(_load_listings())}
 
 @app.get("/api/analytics/trends")
-def get_trends(): return {"trends":_trends(_load_listings())}
+def get_trends(current_user: User = Depends(get_current_user)): return {"trends":_trends(_load_listings())}
 
 @app.get("/api/analytics/supply-demand")
-def get_supply_demand():
+def get_supply_demand(current_user: User = Depends(get_current_user)):
     grouped=defaultdict(list); rng=random.Random(7)
     for l in _load_listings():
         if l.get("suburb"): grouped[l["suburb"]].append(l)
@@ -344,13 +353,13 @@ def get_supply_demand():
     return {"data":sorted(result,key=lambda x:-x["supply"])}
 
 @app.get("/api/analytics/sources")
-def get_sources_analytics():
+def get_sources_analytics(current_user: User = Depends(get_current_user)):
     counts=defaultdict(int)
     for l in _load_listings(): counts[l.get("source_site","Unknown")]+=1
     return {"sources":[{"name":k,"count":v} for k,v in sorted(counts.items(),key=lambda x:-x[1])]}
 
 @app.get("/api/analytics/middleman-flags")
-def get_middleman_flags(limit:int=20):
+def get_middleman_flags(limit:int=20, current_user: User = Depends(get_current_user)):
     flagged=[]
     for l in _load_listings():
         if l.get("price_monthly_k") and l.get("suburb"):
@@ -368,19 +377,19 @@ async def trigger_scrape(req:ScrapeRequest,background_tasks:BackgroundTasks,curr
     return scrape_jobs[job_id]
 
 @app.get("/api/scrape/status/{job_id}")
-def get_scrape_status(job_id:str):
+def get_scrape_status(job_id:str, current_user: User = Depends(get_current_user)):
     job=scrape_jobs.get(job_id)
     if not job: raise HTTPException(404,f"Job '{job_id}' not found")
     return job
 
 @app.get("/api/scrape/jobs")
-def list_jobs(): return {"jobs":sorted(scrape_jobs.values(),key=lambda x:x.get("queued_at",""),reverse=True)[:20]}
+def list_jobs(current_user: User = Depends(get_current_user)): return {"jobs":sorted(scrape_jobs.values(),key=lambda x:x.get("queued_at",""),reverse=True)[:20]}
 
 @app.get("/api/suburbs")
-def get_suburbs(): return {"suburbs":[{"name":k,"lat":v["lat"],"lng":v["lng"]} for k,v in SUBURB_COORDS.items()]}
+def get_suburbs(current_user: User = Depends(get_current_user)): return {"suburbs":[{"name":k,"lat":v["lat"],"lng":v["lng"]} for k,v in SUBURB_COORDS.items()]}
 
 @app.get("/api/sources")
-def get_source_list():
+def get_source_list(current_user: User = Depends(get_current_user)):
     return {"sources":["Hausples","The Professionals","Ray White PNG","Century 21 PNG",
                        "MarketMeri","SRE PNG","DAC Properties","AAA Properties",
                        "Arthur Strachan","Pacific Palms","Facebook Marketplace"]}

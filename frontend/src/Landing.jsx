@@ -63,73 +63,100 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
     }
   };
 
+  const [showEmailForm, setShowEmailForm] = useState(false);
+
   const AuthModal = () => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }} onClick={() => { setShowAuth(false); setError(''); }}>
+    }} onClick={() => { setShowAuth(false); setShowEmailForm(false); setError(''); }}>
       <div style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
-        borderRadius: '24px', padding: '40px', maxWidth: '400px', width: '100%',
+        borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
         boxShadow: '0 32px 64px rgba(0,0,0,0.5)', position: 'relative'
       }} onClick={e => e.stopPropagation()}>
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-        }} onClick={() => { setShowAuth(false); setError(''); }}>✕</button>
+        }} onClick={() => { setShowAuth(false); setShowEmailForm(false); setError(''); }}>✕</button>
 
-        <h2 style={{fontFamily: 'var(--font-d)', fontSize: '28px', marginBottom: '8px', textAlign: 'center'}}>
-          {authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
-        </h2>
-        <p style={{fontSize: '14px', color: 'var(--text2)', textAlign: 'center', marginBottom: '32px'}}>
-          {authMode === 'login' ? 'Access real-time property intelligence.' : 'Join the PNG property network.'}
-        </p>
+        {!showEmailForm ? (
+          <>
+            <h2 style={{fontFamily: 'var(--font-d)', fontSize: '32px', marginBottom: '12px', textAlign: 'center', letterSpacing: '0.05em'}}>
+              GET ACCESS
+            </h2>
+            <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px', maxWidth: '280px', margin: '0 auto 32px'}}>
+              Sign up to access real-time property intelligence.
+            </p>
 
-        <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-          {authMode === 'signup' && (
-            <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-              <label style={{fontSize: '12px', color: 'var(--text2)', fontWeight: '600'}}>FULL NAME</label>
-              <input
-                type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff'}}
-              />
+            <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+              <AuthButton icon="🌐" label="Continue with Google" onClick={() => {}} color="#4285F4" />
+              <AuthButton icon="📘" label="Continue with Facebook" onClick={() => {}} color="#1877F2" />
+              <AuthButton icon="📧" label="Continue with Email" onClick={() => setShowEmailForm(true)} color="var(--teal)" />
+              <AuthButton icon="📱" label="Continue with Phone" onClick={() => {}} color="#22c55e" />
+              <AuthButton icon="💬" label="Continue with WhatsApp" onClick={() => {}} color="#25D366" />
             </div>
-          )}
-          <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-            <label style={{fontSize: '12px', color: 'var(--text2)', fontWeight: '600'}}>EMAIL ADDRESS</label>
-            <input
-              type="email" required value={email} onChange={e => setEmail(e.target.value)}
-              style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff'}}
-            />
-          </div>
-          <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-            <label style={{fontSize: '12px', color: 'var(--text2)', fontWeight: '600'}}>PASSWORD</label>
-            <input
-              type="password" required value={password} onChange={e => setPassword(e.target.value)}
-              style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff'}}
-            />
-          </div>
 
-          {error && <div style={{color: error.includes('successful') ? 'var(--green)' : 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
+            <div style={{marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
+              By continuing, you agree to our <a href="#" style={{color: 'var(--teal)', textDecoration: 'underline'}}>Terms of Service</a>.
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'}}>
+               <button onClick={() => setShowEmailForm(false)} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '18px'}}>←</button>
+               <h2 style={{fontFamily: 'var(--font-d)', fontSize: '24px', letterSpacing: '0.02em'}}>
+                 {authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+               </h2>
+            </div>
 
-          <button type="submit" disabled={loading} style={{
-            marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
-            background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
-            fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
-          }}>
-            {loading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Sign Up'}
-          </button>
-        </form>
+            <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+              {authMode === 'signup' && (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700', letterSpacing: '0.05em'}}>FULL NAME</label>
+                  <input
+                    type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '14px'}}
+                  />
+                </div>
+              )}
+              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700', letterSpacing: '0.05em'}}>EMAIL ADDRESS</label>
+                <input
+                  type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '14px'}}
+                />
+              </div>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700', letterSpacing: '0.05em'}}>PASSWORD</label>
+                <input
+                  type="password" required value={password} onChange={e => setPassword(e.target.value)}
+                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '14px'}}
+                />
+              </div>
 
-        <div style={{marginTop: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text2)'}}>
-          {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
-          <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); }} style={{
-            background: 'none', border: 'none', color: 'var(--teal)', fontWeight: '600', cursor: 'pointer', padding: '0 4px'
-          }}>
-            {authMode === 'login' ? 'Create one' : 'Sign in'}
-          </button>
-        </div>
+              {error && <div style={{color: error.includes('successful') ? 'var(--green)' : 'var(--red)', fontSize: '13px', textAlign: 'center', padding: '8px', background: 'rgba(239,68,68,0.1)', borderRadius: '8px'}}>{error}</div>}
+
+              <button type="submit" disabled={loading} style={{
+                marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
+                fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, fontSize: '15px'
+              }}>
+                {loading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Sign Up'}
+              </button>
+            </form>
+
+            <div style={{marginTop: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text2)'}}>
+              {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
+              <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); }} style={{
+                background: 'none', border: 'none', color: 'var(--teal)', fontWeight: '600', cursor: 'pointer', padding: '0 4px'
+              }}>
+                {authMode === 'login' ? 'Create one' : 'Sign in'}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
