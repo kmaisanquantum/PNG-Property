@@ -6,9 +6,21 @@ import Landing from "./Landing";
 const API = import.meta.env.VITE_API_URL || "/api";
 
 async function apiFetch(path, opts = {}) {
+  const token = localStorage.getItem("png_token");
+  const headers = { ...opts.headers };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   try {
-    const r = await fetch(`${API}${path}`, opts);
-    if (!r.ok) throw new Error(`${r.status}`);
+    const r = await fetch(`${API}${path}`, { ...opts, headers });
+    if (!r.ok) {
+      if (r.status === 401) {
+        localStorage.removeItem("png_token");
+        localStorage.removeItem("png_user");
+      }
+      throw new Error(`${r.status}`);
+    }
     return r.json();
   } catch {
     return null;
@@ -348,7 +360,7 @@ const NAV_ITEMS = [
   {id:"flags",     icon:"⚑", label:"Flagged"},
 ];
 
-function Sidebar({active, onNav}) {
+function Sidebar({active, onNav, onLogout, user}) {
   return (
     <div style={{width:64,background:C.bg1,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",alignItems:"center",padding:"16px 0",gap:4,flexShrink:0,zIndex:10}}>
       <div style={{fontFamily:"'Barlow Condensed'",fontSize:22,fontWeight:800,color:C.teal,marginBottom:20,letterSpacing:"-.02em"}}>PD</div>
@@ -358,13 +370,16 @@ function Sidebar({active, onNav}) {
         </button>
       ))}
       <div style={{flex:1}}/>
+      <button onClick={onLogout} title="Logout" style={{width:44,height:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16}}>
+        ⎋
+      </button>
       <div style={{width:8,height:8,borderRadius:"50%",background:C.green,boxShadow:`0 0 0 3px ${C.green}30`,animation:"pulse 2s infinite"}} title="Live"/>
     </div>
   );
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
-function Topbar({view, overview, onScrape, loading}) {
+function Topbar({view, overview, onScrape, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings"};
   return (
     <div style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
@@ -373,6 +388,10 @@ function Topbar({view, overview, onScrape, loading}) {
         <span style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
+        <div style={{marginRight:16, textAlign:'right'}}>
+           <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
+           <div style={{fontSize:9, color:C.text2}}>{user?.email}</div>
+        </div>
         {overview?.last_scraped&&<span style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}
         <button onClick={onScrape} style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
@@ -700,7 +719,8 @@ function FlagsView() {
 
 // ── APP ROOT ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [showDashboard, setShowDashboard] = useState(false);
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("png_user") || "null"));
+  const [showDashboard, setShowDashboard] = useState(!!localStorage.getItem("png_token"));
   const [view,setView]=useState("dashboard");
   const [showScrape,setShowScrape]=useState(false);
   const [overview,setOverview]=useState(null);
@@ -709,6 +729,20 @@ export default function App() {
   const [sd,setSd]=useState(null);
   const [sources,setSources]=useState(null);
   const [loading,setLoading]=useState(true);
+
+  const handleAuthSuccess = (authData) => {
+    localStorage.setItem("png_token", authData.access_token);
+    localStorage.setItem("png_user", JSON.stringify(authData.user));
+    setUser(authData.user);
+    setShowDashboard(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("png_token");
+    localStorage.removeItem("png_user");
+    setUser(null);
+    setShowDashboard(false);
+  };
 
   const loadAll=useCallback(async()=>{
     if (!showDashboard) return;
@@ -728,12 +762,12 @@ export default function App() {
     <>
       <style>{FONTS}</style>
       {!showDashboard ? (
-        <Landing onEnterDashboard={() => setShowDashboard(true)} />
+        <Landing onEnterDashboard={handleAuthSuccess} apiFetch={apiFetch} />
       ) : (
       <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
-        <Sidebar active={view} onNav={setView}/>
+        <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} loading={loading}/>
+          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources}/>}
             {view==="listings" &&<ListingsView/>}

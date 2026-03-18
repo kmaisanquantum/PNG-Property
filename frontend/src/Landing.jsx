@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
 
-const Landing = ({ onEnterDashboard }) => {
+const Landing = ({ onEnterDashboard, apiFetch }) => {
   const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -14,12 +20,55 @@ const Landing = ({ onEnterDashboard }) => {
     return () => observer.disconnect();
   }, []);
 
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (authMode === 'login') {
+        const formData = new URLSearchParams();
+        formData.append('username', email);
+        formData.append('password', password);
+
+        const data = await apiFetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString()
+        });
+
+        if (data && data.access_token) {
+          onEnterDashboard(data);
+        } else {
+          setError('Invalid email or password');
+        }
+      } else {
+        const data = await apiFetch('/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, full_name: fullName })
+        });
+
+        if (data && data.email) {
+          setAuthMode('login');
+          setError('Signup successful! Please sign in.');
+        } else {
+          setError('Signup failed. Email might already be registered.');
+        }
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const AuthModal = () => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }} onClick={() => setShowAuth(false)}>
+    }} onClick={() => { setShowAuth(false); setError(''); }}>
       <div style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
         borderRadius: '24px', padding: '40px', maxWidth: '400px', width: '100%',
@@ -28,21 +77,58 @@ const Landing = ({ onEnterDashboard }) => {
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-        }} onClick={() => setShowAuth(false)}>✕</button>
+        }} onClick={() => { setShowAuth(false); setError(''); }}>✕</button>
 
-        <h2 style={{fontFamily: 'var(--font-d)', fontSize: '28px', marginBottom: '8px', textAlign: 'center'}}>GET ACCESS</h2>
-        <p style={{fontSize: '14px', color: 'var(--text2)', textAlign: 'center', marginBottom: '32px'}}>Sign up to access real-time property intelligence.</p>
+        <h2 style={{fontFamily: 'var(--font-d)', fontSize: '28px', marginBottom: '8px', textAlign: 'center'}}>
+          {authMode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+        </h2>
+        <p style={{fontSize: '14px', color: 'var(--text2)', textAlign: 'center', marginBottom: '32px'}}>
+          {authMode === 'login' ? 'Access real-time property intelligence.' : 'Join the PNG property network.'}
+        </p>
 
-        <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-          <AuthButton icon="🌐" label="Continue with Google" onClick={onEnterDashboard} />
-          <AuthButton icon="📘" label="Continue with Facebook" onClick={onEnterDashboard} />
-          <AuthButton icon="📧" label="Continue with Email" onClick={onEnterDashboard} />
-          <AuthButton icon="📱" label="Continue with Phone" onClick={onEnterDashboard} />
-          <AuthButton icon="💬" label="Continue with WhatsApp" color="#25D366" onClick={onEnterDashboard} />
-        </div>
+        <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+          {authMode === 'signup' && (
+            <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+              <label style={{fontSize: '12px', color: 'var(--text2)', fontWeight: '600'}}>FULL NAME</label>
+              <input
+                type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff'}}
+              />
+            </div>
+          )}
+          <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+            <label style={{fontSize: '12px', color: 'var(--text2)', fontWeight: '600'}}>EMAIL ADDRESS</label>
+            <input
+              type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff'}}
+            />
+          </div>
+          <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+            <label style={{fontSize: '12px', color: 'var(--text2)', fontWeight: '600'}}>PASSWORD</label>
+            <input
+              type="password" required value={password} onChange={e => setPassword(e.target.value)}
+              style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '10px', color: '#fff'}}
+            />
+          </div>
 
-        <div style={{marginTop: '24px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
-          By continuing, you agree to our <a href="#" style={{color: 'var(--teal)'}}>Terms of Service</a>.
+          {error && <div style={{color: error.includes('successful') ? 'var(--green)' : 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
+
+          <button type="submit" disabled={loading} style={{
+            marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
+            background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
+            fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1
+          }}>
+            {loading ? 'Processing...' : authMode === 'login' ? 'Sign In' : 'Sign Up'}
+          </button>
+        </form>
+
+        <div style={{marginTop: '24px', textAlign: 'center', fontSize: '13px', color: 'var(--text2)'}}>
+          {authMode === 'login' ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setError(''); }} style={{
+            background: 'none', border: 'none', color: 'var(--teal)', fontWeight: '600', cursor: 'pointer', padding: '0 4px'
+          }}>
+            {authMode === 'login' ? 'Create one' : 'Sign in'}
+          </button>
         </div>
       </div>
     </div>

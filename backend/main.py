@@ -9,14 +9,40 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
-from pydantic import BaseModel
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(message)s")
 log = logging.getLogger("api")
+
+SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 43200 # 30 days
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.now(timezone.utc) + expires_delta
+    else:
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
 app = FastAPI(
     title="PNG Property Dashboard API",
@@ -53,19 +79,66 @@ BENCHMARKS = {
     "Six Mile":1450,"Eight Mile":1225,"Morata":1633,"Erima":2033,
 }
 
-def _load_listings() -> list[dict]:
+def _get_db():
     mongo_url = os.getenv("MONGODB_URL","")
-    if mongo_url:
+    if not mongo_url: return None
+    try:
+        from pymongo import MongoClient
+        client = MongoClient(mongo_url, serverSelectionTimeoutMS=4000)
+        return client["png_realestate"]
+    except Exception as e:
+        log.warning(f"MongoDB connection failed: {e}")
+        return None
+
+def _load_listings() -> list[dict]:
+    db = _get_db()
+    if db is not None:
         try:
-            from pymongo import MongoClient
-            client = MongoClient(mongo_url, serverSelectionTimeoutMS=4000)
-            docs = list(client["png_realestate"]["listings"].find({},{"_id":0}).limit(2000))
+            docs = list(db["listings"].find({},{"_id":0}).limit(2000))
             if docs: return docs
         except Exception as e:
-            log.warning(f"MongoDB unavailable: {e}")
+            log.warning(f"MongoDB query failed: {e}")
     if OUTPUT_FILE.exists():
         with open(OUTPUT_FILE) as f: return json.load(f)
     return _mock_listings()
+
+def get_user_by_email(email: str) -> Optional[UserInDB]:
+    db = _get_db()
+    if db is None: return None
+    user_doc = db["users"].find_one({"email": email})
+    if user_doc:
+        return UserInDB(**user_doc)
+    return None
+
+def create_user(user: UserCreate) -> UserInDB:
+    db = _get_db()
+    if db is None: raise Exception("Database not available")
+    hashed_password = get_password_hash(user.password)
+    user_in_db = UserInDB(
+        email=user.email,
+        hashed_password=hashed_password,
+        full_name=user.full_name,
+        disabled=False
+    )
+    db["users"].insert_one(user_in_db.model_dump())
+    return user_in_db
+
+@app.on_event("startup")
+async def startup_event():
+    # Ensure admin user exists
+    admin_email = "kmaisan@dspng.tech"
+    admin_pass = "kilomike@2024"
+    try:
+        db = _get_db()
+        if db is not None:
+            existing = db["users"].find_one({"email": admin_email})
+            if not existing:
+                log.info(f"Seeding admin user: {admin_email}")
+                create_user(UserCreate(email=admin_email, password=admin_pass, full_name="Admin User"))
+            else:
+                log.info(f"Admin user {admin_email} already exists")
+    except Exception as e:
+        log.error(f"Failed to seed admin user: {e}")
 
 def _mock_listings() -> list[dict]:
     suburbs=["Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile","Morata","Erima"]
@@ -121,6 +194,46 @@ class ScrapeRequest(BaseModel):
     include_facebook: bool = False
     headless: bool = True
 
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+class User(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+    disabled: Optional[bool] = None
+
+class UserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+
+class UserInDB(User):
+    hashed_password: str
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except JWTError:
+        raise credentials_exception
+    user = get_user_by_email(token_data.email)
+    if user is None:
+        raise credentials_exception
+    return user
+
 async def _run_scrape(job_id:str, req:ScrapeRequest):
     scrape_jobs[job_id].update({"status":"running","started_at":datetime.now(timezone.utc).isoformat(),"progress":0,"collected":0})
     try:
@@ -147,6 +260,38 @@ def root_redirect():
 @app.get("/api")
 @app.get("/api/")
 def health(): return {"service":"PNG Property Dashboard API","version":"1.0.0","status":"ok"}
+
+@app.post("/api/auth/signup", response_model=User)
+def signup(user: UserCreate):
+    db = _get_db()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not available")
+    existing_user = get_user_by_email(user.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return create_user(user)
+
+@app.post("/api/auth/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = get_user_by_email(form_data.username)
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email}, expires_delta=access_token_expires
+    )
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "email": user.email,
+            "full_name": user.full_name
+        }
+    }
 
 @app.get("/api/listings")
 def get_listings(suburb:Optional[str]=None,source:Optional[str]=None,type:Optional[str]=None,
@@ -215,7 +360,7 @@ def get_middleman_flags(limit:int=20):
     return {"flagged":flagged[:limit],"total_flagged":len(flagged)}
 
 @app.post("/api/scrape/trigger")
-async def trigger_scrape(req:ScrapeRequest,background_tasks:BackgroundTasks):
+async def trigger_scrape(req:ScrapeRequest,background_tasks:BackgroundTasks,current_user: User = Depends(get_current_user)):
     job_id=str(uuid.uuid4())[:8]
     scrape_jobs[job_id]={"job_id":job_id,"status":"queued","sources":req.sources,
         "max_pages":req.max_pages,"queued_at":datetime.now(timezone.utc).isoformat(),"progress":0,"collected":0}
