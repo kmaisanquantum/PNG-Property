@@ -305,16 +305,16 @@ def check_identifier(q: str):
     return {"exists": user is not None, "identifier": q, "provider": user.auth_provider if user else None}
 
 @app.post("/api/auth/external", response_model=Token)
-async def external_auth(provider: str, identifier: str, name: Optional[str] = None):
-    """Simulated Social/OTP Auth. WARNING: For production, verify with provider SDK/API."""
-    log.warning(f"Simulated auth used for {identifier} via {provider}. Ensure this is disabled in production.")
-    user = users_db.get(identifier)
+async def external_auth(provider: str, identifier: str, name: str):
+    """OTP Auth (Phone/WhatsApp). WARNING: For production, verify with provider SDK/API."""
+    log.warning(f"OTP auth used for {identifier} via {provider}.")
+    user = get_user_by_identifier(identifier)
     if not user:
-        # Create new user for social/otp if not exists
+        # Create new user for otp if not exists
         user_create = UserCreate(
             email=identifier if "@" in identifier else None,
             phone=identifier if "@" not in identifier else None,
-            full_name=name or "New User",
+            full_name=name,
             auth_provider=provider
         )
         user = create_user(user_create)

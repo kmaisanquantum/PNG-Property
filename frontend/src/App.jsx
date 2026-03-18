@@ -389,14 +389,13 @@ function Topbar({view, overview, onScrape, onLogout, loading, user}) {
         <span style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
-        <button onClick={onLogout} style={{
-          background: "none", border: `1px solid ${C.red}44`, borderRadius: 8,
-          padding: "6px 12px", color: C.red, fontSize: 11, fontWeight: 600,
-          cursor: "pointer", marginRight: 8
-        }}>Logout</button>
         <div style={{marginRight:16, textAlign:'right'}}>
            <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
-           <div style={{fontSize:9, color:C.text2}}>{user?.email || user?.phone}</div>
+           <div style={{fontSize:9, color:C.text2, marginBottom:4}}>{user?.email || user?.phone}</div>
+           <button onClick={onLogout} style={{
+             background: "none", border: "none", padding: 0, color: C.red,
+             fontSize: 10, fontWeight: 700, cursor: "pointer", textDecoration: "underline"
+           }}>Logout</button>
         </div>
         {overview?.last_scraped&&<span style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}

@@ -92,16 +92,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
     }
   };
 
-  const handleSocialAuth = async (provider) => {
-    setLoading(true);
-    // Simulate social redirect & callback
-    setTimeout(async () => {
-      const id = `social-${Math.random().toString(36).substr(2, 9)}@gmail.com`;
-      const data = await apiFetch(`/auth/external?provider=${provider}&identifier=${id}&name=Social User`, { method: 'POST' });
-      if (data && data.access_token) onEnterDashboard(data);
-      setLoading(false);
-    }, 1000);
-  };
+
 
   const AuthModal = () => (
     <div style={{
@@ -144,13 +135,11 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
 
             <div style={{display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0', opacity: 0.5}}>
               <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-              <span style={{fontSize: '12px'}}>OR</span>
+              <span style={{fontSize: '12px'}}>QUICK OPTIONS</span>
               <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
             </div>
 
             <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-              <AuthButton icon="🌐" label="Google" onClick={() => handleSocialAuth('google')} color="#4285F4" />
-              <AuthButton icon="📘" label="Facebook" onClick={() => handleSocialAuth('facebook')} color="#1877F2" />
               <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#25D366" />
               <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#22c55e" />
             </div>
