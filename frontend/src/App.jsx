@@ -370,8 +370,9 @@ function Sidebar({active, onNav, onLogout, user}) {
         </button>
       ))}
       <div style={{flex:1}}/>
-      <button onClick={onLogout} title="Logout" style={{width:44,height:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16}}>
+      <button onClick={onLogout} title="Logout" style={{width:44,minHeight:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:16,padding:"4px 0"}}>
         ⎋
+        <span style={{fontSize:8,fontWeight:700,marginTop:2}}>LOGOUT</span>
       </button>
       <div style={{width:8,height:8,borderRadius:"50%",background:C.green,boxShadow:`0 0 0 3px ${C.green}30`,animation:"pulse 2s infinite"}} title="Live"/>
     </div>
@@ -379,7 +380,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
-function Topbar({view, overview, onScrape, loading, user}) {
+function Topbar({view, overview, onScrape, onLogout, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings"};
   return (
     <div style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
@@ -388,6 +389,11 @@ function Topbar({view, overview, onScrape, loading, user}) {
         <span style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
+        <button onClick={onLogout} style={{
+          background: "none", border: `1px solid ${C.red}44`, borderRadius: 8,
+          padding: "6px 12px", color: C.red, fontSize: 11, fontWeight: 600,
+          cursor: "pointer", marginRight: 8
+        }}>Logout</button>
         <div style={{marginRight:16, textAlign:'right'}}>
            <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
            <div style={{fontSize:9, color:C.text2}}>{user?.email || user?.phone}</div>
@@ -767,7 +773,7 @@ export default function App() {
       <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} loading={loading} user={user}/>
+          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources}/>}
             {view==="listings" &&<ListingsView/>}

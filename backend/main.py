@@ -124,14 +124,14 @@ def _load_listings() -> list[dict]:
         with open(OUTPUT_FILE) as f: return json.load(f)
     return _mock_listings()
 
-def get_user_by_email(email: str) -> Optional[UserInDB]:
+def get_user_by_identifier(identifier: str) -> Optional[UserInDB]:
     # Check in-memory first
-    if email in users_db:
-        return users_db[email]
+    if identifier in users_db:
+        return users_db[identifier]
     # Check MongoDB
     db = _get_db()
     if db is None: return None
-    user_doc = db["users"].find_one({"email": email})
+    user_doc = db["users"].find_one({"$or": [{"email": identifier}, {"phone": identifier}]})
     if user_doc:
         return UserInDB(**user_doc)
     return None
@@ -254,7 +254,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
-    user = get_user_by_email(token_data.email)
+    user = get_user_by_identifier(token_data.email)
     if user is None:
         raise credentials_exception
     return user
@@ -292,7 +292,7 @@ def signup(user: UserCreate):
     if not identifier:
         raise HTTPException(status_code=400, detail="Identifier (email or phone) is required")
 
-    existing_user = get_user_by_email(user.email) if user.email else users_db.get(user.phone)
+    existing_user = get_user_by_identifier(user.email) if user.email else users_db.get(user.phone)
     if existing_user:
         raise HTTPException(status_code=400, detail="Identifier already registered")
 
@@ -301,23 +301,13 @@ def signup(user: UserCreate):
 @app.get("/api/auth/check-identifier")
 def check_identifier(q: str):
     """Seamless auth: Check if an email or phone already exists."""
-    user = None
-    if "@" in q:
-        user = get_user_by_email(q)
-    else:
-        # Check by phone in memory
-        user = users_db.get(q)
-        if not user:
-            db = _get_db()
-            if db is not None:
-                doc = db["users"].find_one({"phone": q})
-                if doc: user = UserInDB(**doc)
-
+    user = get_user_by_identifier(q)
     return {"exists": user is not None, "identifier": q, "provider": user.auth_provider if user else None}
 
 @app.post("/api/auth/external", response_model=Token)
 async def external_auth(provider: str, identifier: str, name: Optional[str] = None):
-    """Simulated Social/OTP Auth."""
+    """Simulated Social/OTP Auth. WARNING: For production, verify with provider SDK/API."""
+    log.warning(f"Simulated auth used for {identifier} via {provider}. Ensure this is disabled in production.")
     user = users_db.get(identifier)
     if not user:
         # Create new user for social/otp if not exists
@@ -341,7 +331,7 @@ async def external_auth(provider: str, identifier: str, name: Optional[str] = No
 
 @app.post("/api/auth/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user_by_email(form_data.username)
+    user = get_user_by_identifier(form_data.username)
     if not user or not user.hashed_password or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
