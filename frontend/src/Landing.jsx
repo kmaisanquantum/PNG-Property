@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth }) => (
+const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth, authMode, setAuthMode }) => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
@@ -19,10 +19,10 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
         {step === 'identify' && (
           <>
             <h2 style={{fontFamily: 'var(--font-d)', fontSize: '32px', marginBottom: '12px', textAlign: 'center', letterSpacing: '0.05em'}}>
-              GET ACCESS
+              {authMode === 'signup' ? 'CREATE ACCOUNT' : 'WELCOME BACK'}
             </h2>
             <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px'}}>
-              Enter your email or phone to continue.
+              {authMode === 'signup' ? 'Enter your email or phone to get started.' : 'Enter your email or phone to continue.'}
             </p>
 
             <form onSubmit={handleIdentify} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px'}}>
@@ -38,6 +38,18 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
                   {loading ? 'Checking...' : 'Continue'}
                 </button>
             </form>
+
+            <div style={{textAlign: 'center', fontSize: '14px', color: 'var(--text2)'}}>
+              {authMode === 'login' ? (
+                <>
+                  Don't have an account? <button onClick={() => setAuthMode('signup')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: '600', textDecoration: 'underline'}}>Sign Up</button>
+                </>
+              ) : (
+                <>
+                  Already have an account? <button onClick={() => setAuthMode('login')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: '600', textDecoration: 'underline'}}>Sign In</button>
+                </>
+              )}
+            </div>
           </>
         )}
 
@@ -367,8 +379,8 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           <a href="#pricing">Pricing</a>
         </div>
         <div className="nav-cta">
-          <button className="btn-ghost" onClick={() => setShowAuth(true)}>Sign In</button>
-          <button className="btn-primary" onClick={() => setShowAuth(true)}>Get Access →</button>
+          <button className="btn-ghost" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>Sign In</button>
+          <button className="btn-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>Get Access →</button>
         </div>
       </nav>
 
@@ -385,7 +397,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             Aggregated listings from Hausples, The Professionals, Ray White, Century 21 and Facebook — normalised, scored, and delivered as actionable analytics for PNG's property market.
           </p>
           <div className="hero-actions">
-            <button className="btn-hero-primary" onClick={() => setShowAuth(true)}>
+            <button className="btn-hero-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>
               <span>Enter Dashboard</span> <span>→</span>
             </button>
           </div>
@@ -447,6 +459,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           fullName={fullName} setFullName={setFullName}
           error={error} setError={setError} loading={loading}
           handleIdentify={handleIdentify} handleAuth={handleAuth}
+          authMode={authMode} setAuthMode={setAuthMode}
         />
       )}
     </div>
