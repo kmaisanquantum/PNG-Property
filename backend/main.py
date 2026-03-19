@@ -124,14 +124,14 @@ def _load_listings() -> list[dict]:
         with open(OUTPUT_FILE) as f: return json.load(f)
     return _mock_listings()
 
-def get_user_by_email(email: str) -> Optional[UserInDB]:
-    # Check in-memory first (for seeded admin)
-    if email in users_db:
-        return users_db[email]
+def get_user_by_identifier(identifier: str) -> Optional[UserInDB]:
+    # Check in-memory first
+    if identifier in users_db:
+        return users_db[identifier]
     # Check MongoDB
     db = _get_db()
     if db is None: return None
-    user_doc = db["users"].find_one({"email": email})
+    user_doc = db["users"].find_one({"$or": [{"email": identifier}, {"phone": identifier}]})
     if user_doc:
         return UserInDB(**user_doc)
     return None
@@ -154,14 +154,17 @@ def create_user(user: UserCreate) -> UserInDB:
     # Save to MongoDB if available
     db = _get_db()
     if db is not None:
-        db["users"].update_one(
-            {"$or": [{"email": user.email}, {"phone": user.phone}]},
-            {"$set": user_in_db.model_dump()},
-            upsert=True
-        )
+        try:
+            query = {"$or": []}
+            if user.email: query["$or"].append({"email": user.email})
+            if user.phone: query["$or"].append({"phone": user.phone})
+            db["users"].update_one(query, {"$set": user_in_db.model_dump()}, upsert=True)
+        except Exception as e:
+            log.warning(f"MongoDB save failed: {e}")
 
     # Always keep in memory for immediate access/reliability
-    users_db[identifier] = user_in_db
+    if user.email: users_db[user.email] = user_in_db
+    if user.phone: users_db[user.phone] = user_in_db
     return user_in_db
 
 @app.on_event("startup")
@@ -251,7 +254,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         token_data = TokenData(email=email)
     except JWTError:
         raise credentials_exception
-    user = get_user_by_email(token_data.email)
+    user = get_user_by_identifier(token_data.email)
     if user is None:
         raise credentials_exception
     return user
@@ -285,41 +288,35 @@ def health(): return {"service":"PNG Property Intelligence Dashboard API","versi
 
 @app.post("/api/auth/signup", response_model=User)
 def signup(user: UserCreate):
-    db = _get_db()
-    if db is None:
-        raise HTTPException(status_code=503, detail="Database not available")
-    existing_user = get_user_by_email(user.email)
+    identifier = user.email or user.phone
+    if not identifier:
+        raise HTTPException(status_code=400, detail="Identifier (email or phone) is required")
+
+    existing_user = get_user_by_identifier(user.email) if user.email else users_db.get(user.phone)
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Identifier already registered")
+
     return create_user(user)
 
 @app.get("/api/auth/check-identifier")
 def check_identifier(q: str):
     """Seamless auth: Check if an email or phone already exists."""
-    user = None
-    if "@" in q:
-        user = get_user_by_email(q)
-    else:
-        # Check by phone in memory
-        user = users_db.get(q)
-        if not user:
-            db = _get_db()
-            if db is not None:
-                doc = db["users"].find_one({"phone": q})
-                if doc: user = UserInDB(**doc)
-
+    user = get_user_by_identifier(q)
     return {"exists": user is not None, "identifier": q, "provider": user.auth_provider if user else None}
 
-@app.post("/api/auth/external", response_model=Token)
-async def external_auth(provider: str, identifier: str, name: Optional[str] = None):
-    """Simulated Social/OTP Auth."""
-    user = users_db.get(identifier)
+@app.post("/api/auth/otp", response_model=Token)
+async def otp_auth(provider: str, identifier: str, name: Optional[str] = None):
+    """OTP Auth (Phone/WhatsApp). WARNING: For production, verify with provider SDK/API."""
+    log.warning(f"OTP auth used for {identifier} via {provider}.")
+    user = get_user_by_identifier(identifier)
     if not user:
-        # Create new user for social/otp if not exists
+        if not name:
+            raise HTTPException(status_code=400, detail="Name is required for new users")
+        # Create new user for otp if not exists
         user_create = UserCreate(
             email=identifier if "@" in identifier else None,
             phone=identifier if "@" not in identifier else None,
-            full_name=name or "New User",
+            full_name=name,
             auth_provider=provider
         )
         user = create_user(user_create)
@@ -336,7 +333,7 @@ async def external_auth(provider: str, identifier: str, name: Optional[str] = No
 
 @app.post("/api/auth/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user_by_email(form_data.username)
+    user = get_user_by_identifier(form_data.username)
     if not user or not user.hashed_password or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -345,7 +342,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email or user.phone}, expires_delta=access_token_expires
     )
     return {
         "access_token": access_token,
@@ -403,7 +400,7 @@ def get_supply_demand(current_user: User = Depends(get_current_user)):
         prices=[l["price_monthly_k"] for l in items if l.get("price_monthly_k")]
         result.append({"suburb":suburb,"supply":len(items),
             "verified_supply":sum(1 for l in items if l.get("is_verified")),
-            "social_supply":sum(1 for l in items if not l.get("is_verified")),
+            "unverified_supply":sum(1 for l in items if not l.get("is_verified")),
             "avg_price":int(sum(prices)/len(prices)) if prices else 0,
             "demand_score":min(100,40+sum(1 for l in items if l.get("is_verified"))*3+rng.randint(0,15))})
     return {"data":sorted(result,key=lambda x:-x["supply"])}

@@ -1,18 +1,110 @@
 import React, { useEffect, useState } from 'react';
 
-const AuthButton = ({ icon, label, onClick, color }) => (
-  <button style={{
-    display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
-    padding: '14px 20px', background: 'var(--bg2)', border: '1px solid var(--border)',
-    borderRadius: '12px', color: 'var(--text1)', fontSize: '14px', fontWeight: '600',
-    cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
-  }}
-  onMouseEnter={e => { e.currentTarget.style.borderColor = color || 'var(--teal)'; e.currentTarget.style.color = 'var(--text0)'; }}
-  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text1)'; }}
-  onClick={onClick}>
-    <span style={{fontSize: '18px'}}>{icon}</span>
-    <span>{label}</span>
-  </button>
+const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth, authMode, setAuthMode }) => (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 2000,
+      background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+    }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>
+      <div style={{
+        background: 'var(--bg1)', border: '1px solid var(--border)',
+        borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
+        boxShadow: '0 32px 64px rgba(0,0,0,0.5)', position: 'relative'
+      }} onClick={e => e.stopPropagation()}>
+        <button style={{
+          position: 'absolute', top: '20px', right: '20px', background: 'none',
+          border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
+        }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>✕</button>
+
+        {step === 'identify' && (
+          <>
+            <h2 style={{fontFamily: 'var(--font-d)', fontSize: '32px', marginBottom: '12px', textAlign: 'center', letterSpacing: '0.05em'}}>
+              {authMode === 'signup' ? 'CREATE ACCOUNT' : 'WELCOME BACK'}
+            </h2>
+            <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px'}}>
+              {authMode === 'signup' ? 'Enter your email or phone to get started.' : 'Enter your email or phone to continue.'}
+            </p>
+
+            <form onSubmit={handleIdentify} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px'}}>
+               <input
+                  type="text" required placeholder="Email or Phone number" value={identifier} onChange={e => setIdentifier(e.target.value)}
+                  style={{padding: '14px 18px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '15px'}}
+                />
+                <button type="submit" disabled={loading} style={{
+                  padding: '14px', borderRadius: '12px', border: 'none',
+                  background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
+                  fontWeight: '700', cursor: 'pointer', fontSize: '15px'
+                }}>
+                  {loading ? 'Checking...' : 'Continue'}
+                </button>
+            </form>
+
+            <div style={{textAlign: 'center', fontSize: '14px', color: 'var(--text2)'}}>
+              {authMode === 'login' ? (
+                <>
+                  Don't have an account? <button onClick={() => setAuthMode('signup')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: '600', textDecoration: 'underline'}}>Sign Up</button>
+                </>
+              ) : (
+                <>
+                  Already have an account? <button onClick={() => setAuthMode('login')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: '600', textDecoration: 'underline'}}>Sign In</button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {(step === 'login' || step === 'signup' || step === 'otp') && (
+          <>
+            <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'}}>
+               <button onClick={() => setStep('identify')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '18px'}}>←</button>
+               <h2 style={{fontFamily: 'var(--font-d)', fontSize: '24px', letterSpacing: '0.02em'}}>
+                 {step === 'login' ? 'WELCOME BACK' : step === 'signup' ? 'CREATE ACCOUNT' : 'VERIFY PHONE'}
+               </h2>
+            </div>
+
+            <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+              {step === 'signup' && (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>FULL NAME</label>
+                  <input
+                    type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
+                  />
+                </div>
+              )}
+
+              {(!(step === 'signup' && !identifier.includes('@'))) && (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
+                    {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
+                  </label>
+                  <input
+                    type={step === 'otp' ? 'text' : 'password'} required
+                    placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
+                    value={password} onChange={e => setPassword(e.target.value)}
+                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
+                  />
+                </div>
+              )}
+
+              {error && <div style={{color: 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
+
+              <button type="submit" disabled={loading} style={{
+                marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
+                background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
+                fontWeight: '700', cursor: 'pointer'
+              }}>
+                {loading ? 'Processing...' : step === 'login' ? 'Sign In' : (step === 'signup' && !identifier.includes('@')) ? 'Continue' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
+              </button>
+            </form>
+          </>
+        )}
+
+        <div style={{marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
+          By continuing, you agree to our <a href="#" style={{color: 'var(--teal)', textDecoration: 'underline'}}>Terms of Service</a>.
+        </div>
+      </div>
+    </div>
 );
 
 const Landing = ({ onEnterDashboard, apiFetch }) => {
@@ -102,16 +194,6 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSocialAuth = async (provider) => {
-    setLoading(true);
-    setTimeout(async () => {
-      const id = `social-${Math.random().toString(36).substr(2, 9)}@gmail.com`;
-      const data = await apiFetch(`/auth/external?provider=${provider}&identifier=${id}&name=Social User`, { method: 'POST' });
-      if (data && data.access_token) onEnterDashboard(data);
-      setLoading(false);
-    }, 1000);
   };
 
   return (
@@ -299,8 +381,8 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           <a href="#pricing">Pricing</a>
         </div>
         <div className="nav-cta">
-          <button className="btn-ghost" onClick={() => setShowAuth(true)}>Sign In</button>
-          <button className="btn-primary" onClick={() => setShowAuth(true)}>Get Access →</button>
+          <button className="btn-ghost" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>Sign In</button>
+          <button className="btn-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>Get Access →</button>
         </div>
       </nav>
 
@@ -317,7 +399,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             Aggregated listings from Hausples, The Professionals, Ray White, Century 21 and Facebook — normalised, scored, and delivered as actionable analytics for PNG's property market.
           </p>
           <div className="hero-actions">
-            <button className="btn-hero-primary" onClick={() => setShowAuth(true)}>
+            <button className="btn-hero-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>
               <span>Enter Dashboard</span> <span>→</span>
             </button>
           </div>
@@ -372,109 +454,15 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       </footer>
 
       {showAuth && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 2000,
-          background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-        }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>
-          <div style={{
-            background: 'var(--bg1)', border: '1px solid var(--border)',
-            borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
-            boxShadow: '0 32px 64px rgba(0,0,0,0.5)', position: 'relative'
-          }} onClick={e => e.stopPropagation()}>
-            <button style={{
-              position: 'absolute', top: '20px', right: '20px', background: 'none',
-              border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-            }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>✕</button>
-
-            {step === 'identify' && (
-              <>
-                <h2 style={{fontFamily: 'var(--font-d)', fontSize: '32px', marginBottom: '12px', textAlign: 'center', letterSpacing: '0.05em'}}>
-                  GET ACCESS
-                </h2>
-                <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px'}}>
-                  Enter your email or phone to continue.
-                </p>
-
-                <form onSubmit={handleIdentify} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px'}}>
-                   <input
-                      type="text" required placeholder="Email or Phone number" value={identifier} onChange={e => setIdentifier(e.target.value)}
-                      style={{padding: '14px 18px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', fontSize: '15px'}}
-                    />
-                    <button type="submit" disabled={loading} style={{
-                      padding: '14px', borderRadius: '12px', border: 'none',
-                      background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
-                      fontWeight: '700', cursor: 'pointer', fontSize: '15px'
-                    }}>
-                      {loading ? 'Checking...' : 'Continue'}
-                    </button>
-                </form>
-
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0', opacity: 0.5}}>
-                  <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-                  <span style={{fontSize: '12px'}}>OR</span>
-                  <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-                </div>
-
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                  <AuthButton icon="🌐" label="Google" onClick={() => handleSocialAuth('google')} color="#4285F4" />
-                  <AuthButton icon="📘" label="Facebook" onClick={() => handleSocialAuth('facebook')} color="#1877F2" />
-                  <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#25D366" />
-                  <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setStep('identify'); }} color="#22c55e" />
-                </div>
-              </>
-            )}
-
-            {(step === 'login' || step === 'signup' || step === 'otp') && (
-              <>
-                <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px'}}>
-                   <button onClick={() => setStep('identify')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '18px'}}>←</button>
-                   <h2 style={{fontFamily: 'var(--font-d)', fontSize: '24px', letterSpacing: '0.02em'}}>
-                     {step === 'login' ? 'WELCOME BACK' : step === 'signup' ? 'CREATE ACCOUNT' : 'VERIFY PHONE'}
-                   </h2>
-                </div>
-
-                <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                  {step === 'signup' && (
-                    <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                      <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>FULL NAME</label>
-                      <input
-                        type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                        style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
-                      />
-                    </div>
-                  )}
-
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                    <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
-                      {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
-                    </label>
-                    <input
-                      type={step === 'otp' ? 'text' : 'password'} required
-                      placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
-                      value={password} onChange={e => setPassword(e.target.value)}
-                      style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
-                    />
-                  </div>
-
-                  {error && <div style={{color: 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
-
-                  <button type="submit" disabled={loading} style={{
-                    marginTop: '12px', padding: '14px', borderRadius: '12px', border: 'none',
-                    background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
-                    fontWeight: '700', cursor: 'pointer'
-                  }}>
-                    {loading ? 'Processing...' : step === 'login' ? 'Sign In' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
-                  </button>
-                </form>
-              </>
-            )}
-
-            <div style={{marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--text2)'}}>
-              By continuing, you agree to our <a href="#" style={{color: 'var(--teal)', textDecoration: 'underline'}}>Terms of Service</a>.
-            </div>
-          </div>
-        </div>
+        <AuthModal
+          setShowAuth={setShowAuth} step={step} setStep={setStep}
+          identifier={identifier} setIdentifier={setIdentifier}
+          password={password} setPassword={setPassword}
+          fullName={fullName} setFullName={setFullName}
+          error={error} setError={setError} loading={loading}
+          handleIdentify={handleIdentify} handleAuth={handleAuth}
+          authMode={authMode} setAuthMode={setAuthMode}
+        />
       )}
     </div>
   );

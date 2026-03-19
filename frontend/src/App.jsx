@@ -269,7 +269,7 @@ function ListingRow({l}) {
       <td style={{padding:"9px 12px"}}>
         <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600}}>{l.source_site}</span>
       </td>
-      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Social" color={C.text2} small/>}</td>
+      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Unverified" color={C.text2} small/>}</td>
       <td style={{padding:"9px 12px",color:C.text2,fontSize:11}}>{rel(l.scraped_at)}</td>
       <td style={{padding:"9px 12px"}}>{isFlag&&<span style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}</td>
     </tr>
@@ -370,8 +370,9 @@ function Sidebar({active, onNav, onLogout, user}) {
         </button>
       ))}
       <div style={{flex:1}}/>
-      <button onClick={onLogout} title="Logout" style={{width:44,height:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16}}>
+      <button onClick={onLogout} title="Logout" style={{width:44,minHeight:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:16,padding:"4px 0"}}>
         ⎋
+        <span style={{fontSize:8,fontWeight:700,marginTop:2}}>LOGOUT</span>
       </button>
       <div style={{width:8,height:8,borderRadius:"50%",background:C.green,boxShadow:`0 0 0 3px ${C.green}30`,animation:"pulse 2s infinite"}} title="Live"/>
     </div>
@@ -379,7 +380,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
-function Topbar({view, overview, onScrape, loading, user}) {
+function Topbar({view, overview, onScrape, onLogout, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings"};
   return (
     <div style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
@@ -390,7 +391,11 @@ function Topbar({view, overview, onScrape, loading, user}) {
       <div style={{display:"flex",alignItems:"center",gap:14}}>
         <div style={{marginRight:16, textAlign:'right'}}>
            <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
-           <div style={{fontSize:9, color:C.text2}}>{user?.email || user?.phone}</div>
+           <div style={{fontSize:9, color:C.text2, marginBottom:4}}>{user?.email || user?.phone}</div>
+           <button onClick={onLogout} style={{
+             background: "none", border: "none", padding: 0, color: C.red,
+             fontSize: 10, fontWeight: 700, cursor: "pointer", textDecoration: "underline"
+           }}>Logout</button>
         </div>
         {overview?.last_scraped&&<span style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}
@@ -767,7 +772,7 @@ export default function App() {
       <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} loading={loading} user={user}/>
+          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources}/>}
             {view==="listings" &&<ListingsView/>}
