@@ -304,17 +304,19 @@ def check_identifier(q: str):
     user = get_user_by_identifier(q)
     return {"exists": user is not None, "identifier": q, "provider": user.auth_provider if user else None}
 
-@app.post("/api/auth/external", response_model=Token)
-async def external_auth(provider: str, identifier: str, name: Optional[str] = None):
-    """Simulated Social/OTP Auth. WARNING: For production, verify with provider SDK/API."""
-    log.warning(f"Simulated auth used for {identifier} via {provider}. Ensure this is disabled in production.")
-    user = users_db.get(identifier)
+@app.post("/api/auth/otp", response_model=Token)
+async def otp_auth(provider: str, identifier: str, name: Optional[str] = None):
+    """OTP Auth (Phone/WhatsApp). WARNING: For production, verify with provider SDK/API."""
+    log.warning(f"OTP auth used for {identifier} via {provider}.")
+    user = get_user_by_identifier(identifier)
     if not user:
-        # Create new user for social/otp if not exists
+        if not name:
+            raise HTTPException(status_code=400, detail="Name is required for new users")
+        # Create new user for otp if not exists
         user_create = UserCreate(
             email=identifier if "@" in identifier else None,
             phone=identifier if "@" not in identifier else None,
-            full_name=name or "New User",
+            full_name=name,
             auth_provider=provider
         )
         user = create_user(user_create)
@@ -398,7 +400,7 @@ def get_supply_demand(current_user: User = Depends(get_current_user)):
         prices=[l["price_monthly_k"] for l in items if l.get("price_monthly_k")]
         result.append({"suburb":suburb,"supply":len(items),
             "verified_supply":sum(1 for l in items if l.get("is_verified")),
-            "social_supply":sum(1 for l in items if not l.get("is_verified")),
+            "unverified_supply":sum(1 for l in items if not l.get("is_verified")),
             "avg_price":int(sum(prices)/len(prices)) if prices else 0,
             "demand_score":min(100,40+sum(1 for l in items if l.get("is_verified"))*3+rng.randint(0,15))})
     return {"data":sorted(result,key=lambda x:-x["supply"])}
