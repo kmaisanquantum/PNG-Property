@@ -124,18 +124,17 @@ def _load_listings() -> list[dict]:
         with open(OUTPUT_FILE) as f: return json.load(f)
     return _mock_listings()
 
-def get_user_by_email(email: str) -> Optional[UserInDB]:
-    # Check in-memory first (for seeded admin)
-    if email in users_db:
-        return users_db[email]
-    # Check MongoDB
+def get_user_by_identifier(q: str) -> Optional[UserInDB]:
+    if not q: return None
+    if q in users_db: return users_db[q]
     db = _get_db()
-    if db is None: return None
-    user_doc = db["users"].find_one({"email": email})
-    if user_doc:
-        return UserInDB(**user_doc)
+    if db is not None:
+        user_doc = db["users"].find_one({"$or": [{"email": q}, {"phone": q}]})
+        if user_doc:
+            u = UserInDB(**user_doc)
+            users_db[q] = u
+            return u
     return None
-
 def create_user(user: UserCreate) -> UserInDB:
     hashed_password = get_password_hash(user.password) if user.password else None
     user_in_db = UserInDB(
@@ -235,6 +234,7 @@ class Token(BaseModel):
     user: dict
 
 class TokenData(BaseModel):
+    sub: Optional[str] = None
     email: Optional[str] = None
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
@@ -245,13 +245,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        sub: str = payload.get("sub")
+        if sub is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(sub=sub)
     except JWTError:
         raise credentials_exception
-    user = get_user_by_email(token_data.email)
+    user = get_user_by_identifier(token_data.sub)
     if user is None:
         raise credentials_exception
     return user
@@ -288,7 +288,7 @@ def signup(user: UserCreate):
     db = _get_db()
     if db is None:
         raise HTTPException(status_code=503, detail="Database not available")
-    existing_user = get_user_by_email(user.email)
+    existing_user = get_user_by_identifier(user.email) if user.email else None
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     return create_user(user)
@@ -298,7 +298,7 @@ def check_identifier(q: str):
     """Seamless auth: Check if an email or phone already exists."""
     user = None
     if "@" in q:
-        user = get_user_by_email(q)
+        user = get_user_by_identifier(q)
     else:
         # Check by phone in memory
         user = users_db.get(q)
@@ -336,7 +336,7 @@ async def external_auth(provider: str, identifier: str, name: Optional[str] = No
 
 @app.post("/api/auth/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user_by_email(form_data.username)
+    user = get_user_by_identifier(form_data.username)
     if not user or not user.hashed_password or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -345,7 +345,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email or user.phone}, expires_delta=access_token_expires
     )
     return {
         "access_token": access_token,
