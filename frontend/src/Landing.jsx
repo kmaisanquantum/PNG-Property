@@ -1,110 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const Landing = ({ onEnterDashboard, apiFetch }) => {
-  const [showAuth, setShowAuth] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
-  const [identifier, setIdentifier] = useState(''); // email or phone
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState('identify'); // 'identify', 'login', 'signup', 'otp'
-
-  useEffect(() => {
-    const reveals = document.querySelectorAll('.reveal');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) entry.target.classList.add('visible');
-      });
-    }, { threshold: 0.1 });
-    reveals.forEach(r => observer.observe(r));
-    return () => observer.disconnect();
-  }, []);
-
-  const handleIdentify = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const data = await apiFetch(`/auth/check-identifier?q=${encodeURIComponent(identifier)}`);
-      if (data) {
-        if (data.exists) {
-           // If provider is not email, we should ideally trigger that provider's flow
-           // But for simulation, we'll just go to password if it's email, or OTP if phone
-           if (identifier.includes('@')) {
-             setProvider('email');
-             setStep('login');
-           } else {
-             setProvider('phone');
-             setStep('otp');
-           }
-        } else {
-           setStep('signup');
-        }
-      }
-    } catch (err) {
-      setError('Connection error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      if (step === 'login') {
-        const formData = new URLSearchParams();
-        formData.append('username', identifier);
-        formData.append('password', password);
-
-        const data = await apiFetch('/auth/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData.toString()
-        });
-
-        if (data && data.access_token) onEnterDashboard(data);
-        else setError('Invalid credentials');
-      } else if (step === 'signup') {
-        if (!identifier.includes('@')) {
-          // For phone signups, we transition to OTP step after name is entered
-          setStep('otp');
-          setLoading(false);
-          return;
-        }
-        const data = await apiFetch('/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: identifier,
-            password,
-            full_name: fullName
-          })
-        });
-
-        if (data && data.email) {
-          setStep('login');
-          setError('Account created! Please sign in.');
-        } else setError('Signup failed');
-      } else if (step === 'otp') {
-        // Simulated OTP
-        const data = await apiFetch(`/auth/otp?provider=${provider}&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
-        if (data && data.access_token) onEnterDashboard(data);
-        else setError('Invalid code');
-      }
-    } catch (err) {
-      setError('An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-  const AuthModal = () => (
+const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth, authMode, setAuthMode }) => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
@@ -123,10 +19,10 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         {step === 'identify' && (
           <>
             <h2 style={{fontFamily: 'var(--font-d)', fontSize: '32px', marginBottom: '12px', textAlign: 'center', letterSpacing: '0.05em'}}>
-              GET ACCESS
+              {authMode === 'signup' ? 'CREATE ACCOUNT' : 'WELCOME BACK'}
             </h2>
             <p style={{fontSize: '15px', color: 'var(--text1)', textAlign: 'center', marginBottom: '32px'}}>
-              Enter your email or phone to continue.
+              {authMode === 'signup' ? 'Enter your email or phone to get started.' : 'Enter your email or phone to continue.'}
             </p>
 
             <form onSubmit={handleIdentify} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px'}}>
@@ -143,15 +39,16 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
                 </button>
             </form>
 
-            <div style={{display: 'flex', alignItems: 'center', gap: '10px', margin: '20px 0', opacity: 0.5}}>
-              <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-              <span style={{fontSize: '12px'}}>QUICK OPTIONS</span>
-              <div style={{flex: 1, height: '1px', background: 'var(--border)'}}></div>
-            </div>
-
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-              <AuthButton icon="💬" label="WhatsApp" onClick={() => { setIdentifier('+675'); setProvider('whatsapp'); setStep('identify'); }} color="#25D366" />
-              <AuthButton icon="📱" label="Phone" onClick={() => { setIdentifier('+675'); setProvider('phone'); setStep('identify'); }} color="#22c55e" />
+            <div style={{textAlign: 'center', fontSize: '14px', color: 'var(--text2)'}}>
+              {authMode === 'login' ? (
+                <>
+                  Don't have an account? <button onClick={() => setAuthMode('signup')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: '600', textDecoration: 'underline'}}>Sign Up</button>
+                </>
+              ) : (
+                <>
+                  Already have an account? <button onClick={() => setAuthMode('login')} style={{background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontWeight: '600', textDecoration: 'underline'}}>Sign In</button>
+                </>
+              )}
             </div>
           </>
         )}
@@ -208,22 +105,96 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         </div>
       </div>
     </div>
-  );
+);
 
-  const AuthButton = ({ icon, label, onClick, color }) => (
-    <button style={{
-      display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
-      padding: '14px 20px', background: 'var(--bg2)', border: '1px solid var(--border)',
-      borderRadius: '12px', color: 'var(--text1)', fontSize: '14px', fontWeight: '600',
-      cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left'
-    }}
-    onMouseEnter={e => { e.currentTarget.style.borderColor = color || 'var(--teal)'; e.currentTarget.style.color = 'var(--text0)'; }}
-    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text1)'; }}
-    onClick={onClick}>
-      <span style={{fontSize: '18px'}}>{icon}</span>
-      <span>{label}</span>
-    </button>
-  );
+const Landing = ({ onEnterDashboard, apiFetch }) => {
+  const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [identifier, setIdentifier] = useState(''); // email or phone
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState('identify'); // 'identify', 'login', 'signup', 'otp'
+
+  useEffect(() => {
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    reveals.forEach(r => observer.observe(r));
+    return () => observer.disconnect();
+  }, []);
+
+  const handleIdentify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const data = await apiFetch(`/auth/check-identifier?q=${encodeURIComponent(identifier)}`);
+      if (data) {
+        if (data.exists) {
+           if (identifier.includes('@')) setStep('login');
+           else setStep('otp');
+        } else {
+           setStep('signup');
+        }
+      }
+    } catch (err) {
+      setError('Connection error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (step === 'login') {
+        const formData = new URLSearchParams();
+        formData.append('username', identifier);
+        formData.append('password', password);
+
+        const data = await apiFetch('/auth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: formData.toString()
+        });
+
+        if (data && data.access_token) onEnterDashboard(data);
+        else setError('Invalid credentials');
+      } else if (step === 'signup') {
+        const data = await apiFetch('/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: identifier.includes('@') ? identifier : undefined,
+            phone: !identifier.includes('@') ? identifier : undefined,
+            password,
+            full_name: fullName
+          })
+        });
+
+        if (data && (data.email || data.phone)) {
+          setStep('login');
+          setError('Account created! Please sign in.');
+        } else setError('Signup failed');
+      } else if (step === 'otp') {
+        const data = await apiFetch(`/auth/external?provider=phone&identifier=${identifier}&name=${fullName}`, { method: 'POST' });
+        if (data && data.access_token) onEnterDashboard(data);
+        else setError('Invalid code');
+      }
+    } catch (err) {
+      setError('An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="landing-container">
@@ -410,8 +381,8 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           <a href="#pricing">Pricing</a>
         </div>
         <div className="nav-cta">
-          <button className="btn-ghost" onClick={() => setShowAuth(true)}>Sign In</button>
-          <button className="btn-primary" onClick={() => setShowAuth(true)}>Get Access →</button>
+          <button className="btn-ghost" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>Sign In</button>
+          <button className="btn-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>Get Access →</button>
         </div>
       </nav>
 
@@ -428,7 +399,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             Aggregated listings from Hausples, The Professionals, Ray White, Century 21 and Facebook — normalised, scored, and delivered as actionable analytics for PNG's property market.
           </p>
           <div className="hero-actions">
-            <button className="btn-hero-primary" onClick={() => setShowAuth(true)}>
+            <button className="btn-hero-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>
               <span>Enter Dashboard</span> <span>→</span>
             </button>
           </div>
@@ -482,7 +453,17 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         <p>© 2026 PNG Property Intelligence Dashboard. Built for Papua New Guinea by <a href="https://www.dspng.tech" target="_blank" rel="noopener noreferrer" style={{color: 'var(--teal)', textDecoration: 'none', fontWeight: '600'}}>Deeps Systems</a>.</p>
       </footer>
 
-      {showAuth && <AuthModal />}
+      {showAuth && (
+        <AuthModal
+          setShowAuth={setShowAuth} step={step} setStep={setStep}
+          identifier={identifier} setIdentifier={setIdentifier}
+          password={password} setPassword={setPassword}
+          fullName={fullName} setFullName={setFullName}
+          error={error} setError={setError} loading={loading}
+          handleIdentify={handleIdentify} handleAuth={handleAuth}
+          authMode={authMode} setAuthMode={setAuthMode}
+        />
+      )}
     </div>
   );
 };
