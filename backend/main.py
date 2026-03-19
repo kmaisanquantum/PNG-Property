@@ -4,6 +4,8 @@ FastAPI backend for Render Web Service deployment.
 """
 from __future__ import annotations
 import asyncio, json, logging, os, random, uuid
+from dotenv import load_dotenv
+load_dotenv()
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
