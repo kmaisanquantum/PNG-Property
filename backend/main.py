@@ -443,9 +443,13 @@ def get_suburbs(current_user: User = Depends(get_current_user)): return {"suburb
 
 @app.get("/api/sources")
 def get_source_list(current_user: User = Depends(get_current_user)):
-    return {"sources":["Hausples","The Professionals","Ray White PNG","Century 21 PNG",
-                       "MarketMeri","SRE PNG","DAC Properties","AAA Properties",
-                       "Arthur Strachan","Pacific Palms","Facebook Marketplace"]}
+    return {"sources":[
+        "Hausples", "PNG Real Estate", "MarketMeri", "PNG Buy n Rent",
+        "LJ Hooker", "Ray White PNG", "Strickland Real Estate", "The Professionals",
+        "Century 21", "Budget Real Estate", "Arthur Strachan", "DAC Real Estate",
+        "Kenmok Real Estate", "Pacific Palms", "Credit Corp", "Nambawan Super",
+        "Edai Town", "Facebook Marketplace"
+    ]}
 
 # ── Optional: serve built React SPA from backend (single-service mode) ─────────
 # To enable: cd frontend && npm run build && cp -r dist ../backend/static
