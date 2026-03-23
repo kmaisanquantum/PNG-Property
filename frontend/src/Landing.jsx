@@ -280,6 +280,12 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           padding: 100px 0 60px;
           position: relative; overflow: hidden;
         }
+        @media (max-width: 1024px) {
+          .hero { grid-template-columns: 1fr; padding: 120px 24px 60px; text-align: center; }
+          .hero-left { padding: 0; display: flex; flex-direction: column; align-items: center; }
+          .hero-sub { margin-left: auto; margin-right: auto; }
+          .hero-actions { justify-content: center; }
+        }
         .hero-bg {
           position: absolute; inset: 0; z-index: 0;
           background:
@@ -292,7 +298,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         }
         .hero-title {
           font-family: var(--font-d);
-          font-size: clamp(64px, 7vw, 100px);
+          font-size: clamp(42px, 8vw, 100px);
           line-height: .92;
           letter-spacing: .01em;
           color: var(--text0);
@@ -348,6 +354,10 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           align-items:center; gap:80px;
           position:relative;
         }
+        @media (max-width: 768px) {
+          .stats-section { padding: 60px 24px; gap: 40px; }
+          .stat-grid { grid-template-columns: 1fr; }
+        }
         .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
         .stat-card {
           background:var(--bg1); border:1px solid var(--border);
@@ -355,6 +365,9 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         }
 
         .preview-section { padding:80px 72px; }
+        @media (max-width: 768px) {
+          .preview-section { padding: 40px 24px; }
+        }
         .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
         .feature-card {
           background:var(--bg1); border:1px solid var(--border);
@@ -363,13 +376,10 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         }
 
         @media (max-width:1024px) {
-          .hero { grid-template-columns:1fr; padding:120px 40px 60px; }
           .hero-right { display:none; }
-          .hero-left { padding:0; }
-          nav { padding:0 24px; }
           .nav-links { display:none; }
-          .stats-section { grid-template-columns:1fr; padding:60px 32px; }
-          .features-grid { grid-template-columns:1fr; padding:0 32px; }
+          .stats-section { grid-template-columns:1fr; }
+          .features-grid { grid-template-columns:1fr; }
         }
       `}</style>
 

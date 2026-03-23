@@ -103,6 +103,27 @@ body { background: ${C.bg0}; color: ${C.text0}; font-family: 'Barlow', sans-seri
 .scrape-btn:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 4px 12px rgba(20,184,166,0.3); }
 .link-btn { color: #14b8a6; cursor: pointer; text-decoration: none; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: gap 0.2s ease; }
 .link-btn:hover { gap: 8px; color: #8b5cf6; }
+
+@media (max-width: 768px) {
+  .app-shell { flex-direction: column !important; }
+  .sidebar-container {
+    width: 100% !important; height: 60px !important;
+    flex-direction: row !important; padding: 0 16px !important;
+    border-right: none !important; border-top: 1px solid ${C.border} !important;
+    order: 2;
+  }
+  .sidebar-logo { display: none !important; }
+  .nav-items-wrapper { flex-direction: row !important; flex: 1; justify-content: space-around; }
+  .sidebar-spacer { display: none !important; }
+  .logout-btn { border: none !important; width: auto !important; height: auto !important; margin-bottom: 0 !important; }
+  .live-indicator { display: none !important; }
+  .main-content { height: calc(100vh - 60px) !important; order: 1; }
+  .topbar { padding: 0 12px !important; }
+  .location-tag, .updated-tag, .user-info { display: none !important; }
+  .scrape-text { display: none !important; }
+  .scrape-btn { padding: 8px !important; }
+  .dashboard-grid-row { grid-template-columns: 1fr !important; }
+}
 `;
 
 // ── TINY UTILITIES ────────────────────────────────────────────────────────────
@@ -394,19 +415,25 @@ const NAV_ITEMS = [
 
 function Sidebar({active, onNav, onLogout, user}) {
   return (
-    <div style={{width:64,background:C.bg1,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",alignItems:"center",padding:"16px 0",gap:4,flexShrink:0,zIndex:10}}>
-      <div style={{fontFamily:"'Barlow Condensed'",fontSize:22,fontWeight:800,color:C.teal,marginBottom:20,letterSpacing:"-.02em"}}>PD</div>
-      {NAV_ITEMS.map(n=>(
-        <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} className="nav-btn" style={{width:44,height:44,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:10,color:active===n.id?C.teal:C.text2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
-          {n.icon}
-        </button>
-      ))}
-      <div style={{flex:1}}/>
-      <button onClick={onLogout} title="Logout" style={{width:44,minHeight:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:16,padding:"4px 0"}}>
+    <div className="sidebar-container" style={{
+      background:C.bg1, borderRight:`1px solid ${C.border}`,
+      display:"flex", flexDirection:"column", alignItems:"center",
+      padding:"16px 0", gap:4, flexShrink:0, zIndex:10
+    }}>
+      <div className="sidebar-logo" style={{fontFamily:"'Barlow Condensed'",fontSize:22,fontWeight:800,color:C.teal,marginBottom:20,letterSpacing:"-.02em"}}>PD</div>
+      <div className="nav-items-wrapper" style={{display:"flex", flexDirection:"column", gap:4}}>
+        {NAV_ITEMS.map(n=>(
+          <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} className="nav-btn" style={{width:44,height:44,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:10,color:active===n.id?C.teal:C.text2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+            {n.icon}
+          </button>
+        ))}
+      </div>
+      <div style={{flex:1}} className="sidebar-spacer"/>
+      <button onClick={onLogout} title="Logout" className="logout-btn" style={{width:44,minHeight:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:16,padding:"4px 0"}}>
         ⎋
         <span style={{fontSize:8,fontWeight:700,marginTop:2}}>LOGOUT</span>
       </button>
-      <div style={{width:8,height:8,borderRadius:"50%",background:C.green,boxShadow:`0 0 0 3px ${C.green}30`,animation:"pulse 2s infinite"}} title="Live"/>
+      <div style={{width:8,height:8,borderRadius:"50%",background:C.green,boxShadow:`0 0 0 3px ${C.green}30`,animation:"pulse 2s infinite"}} title="Live" className="live-indicator"/>
     </div>
   );
 }
@@ -415,13 +442,13 @@ function Sidebar({active, onNav, onLogout, user}) {
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings",sources:"Market Sources"};
   return (
-    <div style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
+    <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
         <span style={{fontFamily:"'Barlow Condensed'",fontSize:18,fontWeight:700,color:C.text0}}>{viewLabels[view]}</span>
-        <span style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
+        <span className="location-tag" style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
-        <div style={{marginRight:16, textAlign:'right'}}>
+        <div className="user-info" style={{marginRight:16, textAlign:'right'}}>
            <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
            <div style={{fontSize:9, color:C.text2, marginBottom:4}}>{user?.email || user?.phone}</div>
            <button onClick={onLogout} style={{
@@ -429,10 +456,10 @@ function Topbar({view, overview, onScrape, onLogout, loading, user}) {
              fontSize: 10, fontWeight: 700, cursor: "pointer", textDecoration: "underline"
            }}>Logout</button>
         </div>
-        {overview?.last_scraped&&<span style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
+        {overview?.last_scraped&&<span className="updated-tag" style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}
         <button onClick={onScrape} className="scrape-btn" style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-          ⚡ Run Scrape
+          <span className="scrape-icon">⚡</span> <span className="scrape-text">Run Scrape</span>
         </button>
       </div>
     </div>
@@ -452,7 +479,7 @@ function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
 
   return <div style={{display:"flex",flexDirection:"column",gap:18}}>
     {/* KPIs */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:14}}>
       {keys.map((k,i)=>{
         let click = null;
         if(k.label === 'TOTAL LISTINGS') click = () => onNav('listings');
@@ -461,7 +488,7 @@ function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
       })}
     </div>
     {/* Map + SD */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 280px",gap:14}}>
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 280px",gap:14}}>
       <Card style={{padding:20}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",letterSpacing:"0.08em"}}>PRICE HEATMAP · PGK/MONTH</span>
@@ -484,7 +511,7 @@ function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
       </Card>
     </div>
     {/* Trends + Sources */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:14}}>
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:14}}>
       <Card style={{padding:20}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>RENT TRENDS · 8 WEEKS</span>
@@ -737,8 +764,8 @@ function FlagsView() {
     </Card>
     <Card>
       {loading?<div style={{padding:40,textAlign:"center"}}><Spinner/></div>:
-      <div style={{overflowX:"auto"}}>
-        <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <div style={{overflowX:"auto", width: "100%"}}>
+        <table style={{width:"100%", minWidth: "800px", borderCollapse:"collapse"}}>
           <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
             {["Suburb","Title","Listed Price","Suburb Avg","Overprice %","Source","Posted"].map(h=><th key={h} style={{padding:"8px 12px",textAlign:"left",fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'",whiteSpace:"nowrap"}}>{h}</th>)}
           </tr></thead>
@@ -867,9 +894,9 @@ export default function App() {
       {!showDashboard ? (
         <Landing onEnterDashboard={handleAuthSuccess} apiFetch={apiFetch} />
       ) : (
-      <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
+      <div className="app-shell" style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div className="main-content" style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources} onNav={setView}/>}
