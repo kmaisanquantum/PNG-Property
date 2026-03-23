@@ -147,6 +147,22 @@ async def run_all(
     if _want("hausples"):
         tasks.append(HausplesScraper(max_pages=max_pages, headless=headless).run())
 
+    if _want("png real estate"):
+        tasks.append(HausplesScraper(
+            base_url="https://www.pngrealestate.com.pg",
+            source_site="PNG Real Estate",
+            max_pages=max_pages,
+            headless=headless
+        ).run())
+
+    if _want("png buy n rent"):
+        tasks.append(HausplesScraper(
+            base_url="https://www.pngbuynrent.com",
+            source_site="PNG Buy n Rent",
+            max_pages=max_pages,
+            headless=headless
+        ).run())
+
     if _want("professionals"):
         tasks.append(ProfessionalsScraper(max_pages=max_pages, headless=headless).run())
 
