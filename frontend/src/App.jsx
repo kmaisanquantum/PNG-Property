@@ -309,7 +309,7 @@ function ListingRow({l}) {
 }
 
 // ── SCRAPE CONTROL PANEL ──────────────────────────────────────────────────────
-function ScrapePanel({onClose}) {
+function ScrapePanel({onClose, onRefresh}) {
   const [sources, setSources] = useState(["hausples","professionals","agencies"]);
   const [pages, setPages] = useState(3);
   const [includeFb, setIncludeFb] = useState(false);
@@ -396,7 +396,7 @@ function ScrapePanel({onClose}) {
               <span>{job.collected||0} listings collected</span>
             </div>
           </div>
-          {(job.status==="complete"||job.status==="error")&&<button onClick={()=>{setJob(null);onClose();}} style={{width:"100%",background:C.bg3,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px",color:C.text0,fontSize:13,fontWeight:600,cursor:"pointer"}}>{job.status==="complete"?"✓ Done — Refresh Dashboard":"✗ Dismiss"}</button>}
+          {(job.status==="complete"||job.status==="error")&&<button onClick={()=>{setJob(null);onClose(); if(job.status==="complete" && onRefresh) onRefresh();}} style={{width:"100%",background:C.bg3,border:`1px solid ${C.border}`,borderRadius:8,padding:"10px",color:C.text0,fontSize:13,fontWeight:600,cursor:"pointer"}}>{job.status==="complete"?"✓ Done — Refresh Dashboard":"✗ Dismiss"}</button>}
         </>}
       </Card>
     </div>
@@ -909,7 +909,7 @@ export default function App() {
         </div>
       </div>
       )}
-      {showScrape&&<ScrapePanel onClose={()=>setShowScrape(false)}/>}
+      {showScrape&&<ScrapePanel onClose={()=>setShowScrape(false)} onRefresh={loadAll}/>}
     </>
   );
 }

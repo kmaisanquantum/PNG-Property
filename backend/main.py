@@ -291,8 +291,12 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
             on_progress=on_progress
         )
 
-        # Export to the file consumed by the dashboard
-        export_json(listings, OUTPUT_FILE)
+        # Export to the file consumed by the dashboard only if we actually found something
+        if listings:
+            export_json(listings, OUTPUT_FILE)
+            log.info(f"Scrape job {job_id} updated {OUTPUT_FILE} with {len(listings)} listings.")
+        else:
+            log.warning(f"Scrape job {job_id} collected 0 listings. Preserving existing {OUTPUT_FILE}.")
 
         scrape_jobs[job_id].update({
             "status": "complete",
