@@ -256,22 +256,39 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         token_data = TokenData(sub=sub)
     except JWTError:
         raise credentials_exception
-    user = get_user_by_identifier(token_data.email)
+    user = get_user_by_identifier(token_data.sub)
     if user is None:
         raise credentials_exception
     return user
 
 async def _run_scrape(job_id:str, req:ScrapeRequest):
-    scrape_jobs[job_id].update({"status":"running","started_at":datetime.now(timezone.utc).isoformat(),"progress":0,"collected":0})
+    from png_scraper.main import run_all, export_json
+    scrape_jobs[job_id].update({"status":"running","started_at":datetime.now(timezone.utc).isoformat(),"progress":10,"collected":0})
     try:
-        rng=random.Random(); total=len(req.sources)*req.max_pages; collected=0
-        for i,source in enumerate(req.sources):
-            for p in range(req.max_pages):
-                await asyncio.sleep(0.8); collected+=rng.randint(8,22)
-                scrape_jobs[job_id].update({"progress":int(((i*req.max_pages+p+1)/total)*100),
-                    "collected":collected,"current_source":source,"current_page":p+1})
-        scrape_jobs[job_id].update({"status":"complete","finished_at":datetime.now(timezone.utc).isoformat(),"progress":100,"collected":collected})
+        # Use the real scraper logic
+        # If 'facebook' is in sources but include_facebook is False, we force it
+        include_fb = req.include_facebook or any(s.lower() == "facebook" for s in req.sources)
+        # Remove 'facebook' from the sources list passed to run_all if we want to avoid double-processing,
+        # but run_all handles it if include_facebook is True and 'facebook' is in sources.
+
+        listings = await run_all(
+            include_facebook=include_fb,
+            headless=req.headless,
+            sources=req.sources,
+            max_pages=req.max_pages
+        )
+
+        # Export to the file consumed by the dashboard
+        export_json(listings, OUTPUT_FILE)
+
+        scrape_jobs[job_id].update({
+            "status": "complete",
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+            "progress": 100,
+            "collected": len(listings)
+        })
     except Exception as e:
+        log.error(f"Scrape job {job_id} failed: {e}")
         scrape_jobs[job_id].update({"status":"error","error":str(e)})
 
 # ── Routes ────────────────────────────────────────────────────────────────────

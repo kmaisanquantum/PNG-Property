@@ -299,8 +299,27 @@ function ScrapePanel({onClose}) {
   const toggleSrc = s => setSources(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s]);
 
   const trigger = async () => {
-    const data = await apiFetch("/scrape/trigger",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sources,max_pages:pages,include_facebook:includeFb,headless:true})});
-    if(data) { setJob(data); setPolling(true); }
+    try {
+      const include_fb = sources.includes("facebook");
+      const data = await apiFetch("/scrape/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sources: sources.filter(s => s !== "facebook"),
+          max_pages: pages,
+          include_facebook: include_fb,
+          headless: true
+        })
+      });
+      if (data) {
+        setJob(data);
+        setPolling(true);
+      } else {
+        alert("Failed to start scrape job. Please check your connection or login status.");
+      }
+    } catch (err) {
+      alert("Error starting scrape job: " + err.message);
+    }
   };
 
   useEffect(()=>{
