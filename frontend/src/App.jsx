@@ -336,7 +336,8 @@ function ScrapePanel({onClose}) {
             </div>
           </div>
           <div style={{background:C.bg3,borderRadius:8,padding:"10px 14px",marginBottom:22,fontSize:12,color:C.text1}}>
-            ⚠️ Facebook scraping requires credentials in <code style={{color:C.teal}}>.env</code> and a dedicated account. Runs in visible mode for 2FA.
+            ⚠️ Facebook scraping requires <code style={{color:C.teal}}>FB_EMAIL</code> and <code style={{color:C.teal}}>FB_PASSWORD</code> in Render environment variables.
+            For 2FA, generate a <code style={{color:C.teal}}>fb_session.json</code> locally and upload it to the <code style={{color:C.teal}}>/app/data</code> persistent disk.
           </div>
           <button onClick={trigger} disabled={sources.length===0} style={{width:"100%",background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"12px",color:"#fff",fontSize:14,fontWeight:700,cursor:sources.length?"pointer":"not-allowed",opacity:sources.length?1:.5}}>
             Start Scraping {sources.length} source{sources.length!==1?"s":""}

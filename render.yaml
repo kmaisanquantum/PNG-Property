@@ -13,6 +13,11 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
 
+    disk:
+      name: png-data
+      mountPath: /app/data
+      sizeGB: 1
+
     envVars:
       - key: PORT
         value: "8000"
@@ -24,12 +29,14 @@ services:
         sync: false
       - key: FB_PASSWORD
         sync: false
+      - key: FB_SESSION_PATH
+        value: /app/data/fb_session.json
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: "*"
       - key: OUTPUT_FILE
-        value: output/png_listings_latest.json
+        value: /app/data/png_listings_latest.json
 
   # ── React Static Site ───────────────────────────────────────────────────────
   - type: static
