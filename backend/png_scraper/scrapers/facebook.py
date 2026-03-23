@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import random
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -38,7 +39,7 @@ log = logging.getLogger("png_scraper.facebook")
 SOURCE_SITE   = "Facebook Marketplace"
 MARKETPLACE_URL = "https://www.facebook.com/marketplace/category/propertyrentals"
 LOGIN_URL       = "https://www.facebook.com/login"
-SESSION_FILE    = Path("fb_session.json")
+SESSION_FILE    = Path(os.getenv("FB_SESSION_PATH", "fb_session.json"))
 
 # Load FB credentials from environment (set in .env or CI secrets — never hardcode)
 FB_EMAIL    = os.getenv("FB_EMAIL", "")
@@ -141,9 +142,14 @@ async def _login_with_credentials(page, email: str, password: str) -> bool:
         # Checkpoint / 2FA detection
         if "checkpoint" in page.url or "two_step" in page.url or "two-factor" in page.url:
             log.warning("[FB] ⚠️  2FA checkpoint detected!")
-            log.warning("[FB]     Complete 2FA in the browser, then press ENTER.")
-            input(">> Press ENTER after completing 2FA: ")
-            await sleep_human(2.0, 4.0)
+            if sys.stdin.isatty():
+                log.warning("[FB]     Complete 2FA in the browser, then press ENTER.")
+                input(">> Press ENTER after completing 2FA: ")
+                await sleep_human(2.0, 4.0)
+            else:
+                log.error("[FB] ❌ Non-interactive shell — cannot complete 2FA checkpoint.")
+                log.error("[FB]    Strategy: Run once locally to generate session file, then upload to Render.")
+                return False
 
         # Verify login success
         if "facebook.com" in page.url and "login" not in page.url:
