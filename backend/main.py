@@ -4,6 +4,8 @@ FastAPI backend for Render Web Service deployment.
 """
 from __future__ import annotations
 import asyncio, json, logging, os, random, uuid
+from dotenv import load_dotenv
+load_dotenv()
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -135,7 +137,6 @@ def get_user_by_identifier(identifier: str) -> Optional[UserInDB]:
     if user_doc:
         return UserInDB(**user_doc)
     return None
-
 def create_user(user: UserCreate) -> UserInDB:
     hashed_password = get_password_hash(user.password) if user.password else None
     user_in_db = UserInDB(
@@ -238,6 +239,7 @@ class Token(BaseModel):
     user: dict
 
 class TokenData(BaseModel):
+    sub: Optional[str] = None
     email: Optional[str] = None
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
@@ -248,10 +250,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        sub: str = payload.get("sub")
+        if sub is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(sub=sub)
     except JWTError:
         raise credentials_exception
     user = get_user_by_identifier(token_data.email)
