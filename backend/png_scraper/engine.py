@@ -392,12 +392,16 @@ class PNGScraper(ABC):
             browser, context = await new_stealth_context(pw, self.headless)
             try:
                 self._page = await context.new_page()
-                results = await self.scrape(context)
+                # 5-minute timeout per source to prevent hanging the whole job
+                results = await asyncio.wait_for(self.scrape(context), timeout=300)
                 log.info(f"[{self.SOURCE_SITE}] ✓ Collected {len(results)} listings")
+            except asyncio.TimeoutError:
+                log.error(f"[{self.SOURCE_SITE}] Scrape timed out after 300s")
             except Exception as exc:
                 log.error(f"[{self.SOURCE_SITE}] Fatal error: {exc}", exc_info=True)
             finally:
                 await browser.close()
+        log.info(f"[{self.SOURCE_SITE}] Scraper finished with {len(results)} results")
         return results
 
     async def _goto(self, url: str, wait_until: str = "domcontentloaded") -> bool:

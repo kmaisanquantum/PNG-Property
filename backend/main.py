@@ -263,19 +263,31 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 async def _run_scrape(job_id:str, req:ScrapeRequest):
     from png_scraper.main import run_all, export_json
-    scrape_jobs[job_id].update({"status":"running","started_at":datetime.now(timezone.utc).isoformat(),"progress":10,"collected":0})
+    scrape_jobs[job_id].update({
+        "status": "running",
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "progress": 5,
+        "collected": 0,
+        "current_source": "Initializing"
+    })
+
+    def on_progress(source_name, count, progress_pct):
+        if job_id in scrape_jobs:
+            scrape_jobs[job_id].update({
+                "collected": scrape_jobs[job_id].get("collected", 0) + count,
+                "progress": round(5 + (progress_pct * 0.9)),  # Scale 0-100 to 5-95
+                "current_source": source_name
+            })
+
     try:
-        # Use the real scraper logic
-        # If 'facebook' is in sources but include_facebook is False, we force it
         include_fb = req.include_facebook or any(s.lower() == "facebook" for s in req.sources)
-        # Remove 'facebook' from the sources list passed to run_all if we want to avoid double-processing,
-        # but run_all handles it if include_facebook is True and 'facebook' is in sources.
 
         listings = await run_all(
             include_facebook=include_fb,
             headless=req.headless,
             sources=req.sources,
-            max_pages=req.max_pages
+            max_pages=req.max_pages,
+            on_progress=on_progress
         )
 
         # Export to the file consumed by the dashboard
@@ -285,7 +297,8 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
             "status": "complete",
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "progress": 100,
-            "collected": len(listings)
+            "collected": len(listings),
+            "current_source": "Finished"
         })
     except Exception as e:
         log.error(f"Scrape job {job_id} failed: {e}")
