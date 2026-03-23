@@ -95,6 +95,14 @@ body { background: ${C.bg0}; color: ${C.text0}; font-family: 'Barlow', sans-seri
 @keyframes spin   { to { transform: rotate(360deg); } }
 @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 .fade-up { animation: fadeUp .4s ease both; }
+.kpi-card { transition: all 0.2s ease; cursor: pointer; }
+.kpi-card:hover { transform: translateY(-3px); border-color: #14b8a6 !important; background: #0f172a !important; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+.nav-btn { transition: all 0.2s ease; }
+.nav-btn:hover { background: #0f172a !important; color: #14b8a6 !important; border-color: #14b8a6 !important; }
+.scrape-btn { transition: all 0.2s ease; }
+.scrape-btn:hover { transform: translateY(-1px); filter: brightness(1.1); box-shadow: 0 4px 12px rgba(20,184,166,0.3); }
+.link-btn { color: #14b8a6; cursor: pointer; text-decoration: none; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; transition: gap 0.2s ease; }
+.link-btn:hover { gap: 8px; color: #8b5cf6; }
 `;
 
 // ── TINY UTILITIES ────────────────────────────────────────────────────────────
@@ -119,16 +127,16 @@ function Pill({children, active, onClick}) {
   return <button onClick={onClick} style={{background:active?C.teal:C.bg3,border:`1px solid ${active?C.teal:C.border}`,borderRadius:20,padding:"4px 12px",color:active?C.bg0:C.text1,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s"}}>{children}</button>;
 }
 
-function Card({children, style={}, className=""}) {
-  return <div className={className} style={{background:C.bg1,border:`1px solid ${C.border}`,borderRadius:12,...style}}>{children}</div>;
+function Card({children, style={}, className="", ...props}) {
+  return <div className={className} {...props} style={{background:C.bg1,border:`1px solid ${C.border}`,borderRadius:12,...style}}>{children}</div>;
 }
 
 function Spinner() {
   return <div style={{width:18,height:18,border:`2px solid ${C.border}`,borderTopColor:C.teal,borderRadius:"50%",animation:"spin .7s linear infinite",flexShrink:0}} />;
 }
 
-function KpiCard({label, value, sub, accent, icon, delay=0}) {
-  return <Card className="fade-up" style={{padding:"18px 20px",animationDelay:`${delay}ms`}}>
+function KpiCard({label, value, sub, accent, icon, delay=0, onClick}) {
+  return <Card className={`fade-up ${onClick ? "kpi-card" : ""}`} onClick={onClick} style={{padding:"18px 20px",animationDelay:`${delay}ms`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
       <div>
         <div style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono',monospace",letterSpacing:"0.1em",marginBottom:6}}>{label}</div>
@@ -219,7 +227,7 @@ function BarChart({data, labelKey, valueKey, color=C.teal}) {
 }
 
 // ── SUPPLY DEMAND ─────────────────────────────────────────────────────────────
-function SupplyDemand({data}) {
+function SupplyDemand({data, onSeeMore}) {
   if(!data?.length) return null;
   const maxS=Math.max(...data.map(d=>d.supply||0));
   return <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -246,6 +254,9 @@ function SupplyDemand({data}) {
         </div>
       </div>;
     })}
+    <div style={{marginTop:10, display:'flex', justifyContent:'center'}}>
+      <div className="link-btn" onClick={onSeeMore}>View Full Analytics →</div>
+    </div>
   </div>;
 }
 
@@ -269,7 +280,7 @@ function ListingRow({l}) {
       <td style={{padding:"9px 12px"}}>
         <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600}}>{l.source_site}</span>
       </td>
-      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Social" color={C.text2} small/>}</td>
+      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Unverified" color={C.text2} small/>}</td>
       <td style={{padding:"9px 12px",color:C.text2,fontSize:11}}>{rel(l.scraped_at)}</td>
       <td style={{padding:"9px 12px"}}>{isFlag&&<span style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}</td>
     </tr>
@@ -365,13 +376,14 @@ function Sidebar({active, onNav, onLogout, user}) {
     <div style={{width:64,background:C.bg1,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",alignItems:"center",padding:"16px 0",gap:4,flexShrink:0,zIndex:10}}>
       <div style={{fontFamily:"'Barlow Condensed'",fontSize:22,fontWeight:800,color:C.teal,marginBottom:20,letterSpacing:"-.02em"}}>PD</div>
       {NAV_ITEMS.map(n=>(
-        <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} style={{width:44,height:44,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:10,color:active===n.id?C.teal:C.text2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+        <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} className="nav-btn" style={{width:44,height:44,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:10,color:active===n.id?C.teal:C.text2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
           {n.icon}
         </button>
       ))}
       <div style={{flex:1}}/>
-      <button onClick={onLogout} title="Logout" style={{width:44,height:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:16}}>
+      <button onClick={onLogout} title="Logout" style={{width:44,minHeight:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:16,padding:"4px 0"}}>
         ⎋
+        <span style={{fontSize:8,fontWeight:700,marginTop:2}}>LOGOUT</span>
       </button>
       <div style={{width:8,height:8,borderRadius:"50%",background:C.green,boxShadow:`0 0 0 3px ${C.green}30`,animation:"pulse 2s infinite"}} title="Live"/>
     </div>
@@ -379,7 +391,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
-function Topbar({view, overview, onScrape, loading, user}) {
+function Topbar({view, overview, onScrape, onLogout, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings"};
   return (
     <div style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
@@ -390,11 +402,15 @@ function Topbar({view, overview, onScrape, loading, user}) {
       <div style={{display:"flex",alignItems:"center",gap:14}}>
         <div style={{marginRight:16, textAlign:'right'}}>
            <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
-           <div style={{fontSize:9, color:C.text2}}>{user?.email || user?.phone}</div>
+           <div style={{fontSize:9, color:C.text2, marginBottom:4}}>{user?.email || user?.phone}</div>
+           <button onClick={onLogout} style={{
+             background: "none", border: "none", padding: 0, color: C.red,
+             fontSize: 10, fontWeight: 700, cursor: "pointer", textDecoration: "underline"
+           }}>Logout</button>
         </div>
         {overview?.last_scraped&&<span style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}
-        <button onClick={onScrape} style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+        <button onClick={onScrape} className="scrape-btn" style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
           ⚡ Run Scrape
         </button>
       </div>
@@ -404,7 +420,7 @@ function Topbar({view, overview, onScrape, loading, user}) {
 
 // ── VIEWS ─────────────────────────────────────────────────────────────────────
 
-function DashboardView({overview, heatmap, trends, sd, sources}) {
+function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
   const [selSuburb, setSelSuburb] = useState(null);
   const o=overview||MOCK_OVERVIEW;
   const h=(heatmap?.suburbs||MOCK_HEATMAP.suburbs);
@@ -416,7 +432,12 @@ function DashboardView({overview, heatmap, trends, sd, sources}) {
   return <div style={{display:"flex",flexDirection:"column",gap:18}}>
     {/* KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14}}>
-      {keys.map((k,i)=><KpiCard key={i} {...k} delay={i*60}/>)}
+      {keys.map((k,i)=>{
+        let click = null;
+        if(k.label === 'TOTAL LISTINGS') click = () => onNav('listings');
+        if(k.label === 'MIDDLEMAN FLAGS') click = () => onNav('flags');
+        return <KpiCard key={i} {...k} delay={i*60} onClick={click}/>
+      })}
     </div>
     {/* Map + SD */}
     <div style={{display:"grid",gridTemplateColumns:"1fr 280px",gap:14}}>
@@ -434,7 +455,7 @@ function DashboardView({overview, heatmap, trends, sd, sources}) {
       </Card>
       <Card style={{padding:20}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>SUPPLY / DEMAND</div>
-        <SupplyDemand data={sdData}/>
+        <SupplyDemand data={sdData} onSeeMore={() => onNav("analytics")}/>
         <div style={{display:"flex",gap:12,marginTop:14}}>
           <div style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:C.text2}}><div style={{width:16,height:3,background:C.teal,borderRadius:2}}/> Demand</div>
           <div style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:C.text2}}><div style={{width:16,height:3,background:C.violet,borderRadius:2}}/> Supply</div>
@@ -767,9 +788,9 @@ export default function App() {
       <div style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} loading={loading} user={user}/>
+          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
-            {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources}/>}
+            {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources} onNav={setView}/>}
             {view==="listings" &&<ListingsView/>}
             {view==="heatmap"  &&<HeatmapView/>}
             {view==="analytics"&&<AnalyticsView/>}

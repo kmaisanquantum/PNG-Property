@@ -5,7 +5,7 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>
+    }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>
       <div style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
         borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
@@ -14,7 +14,7 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
-        }} onClick={() => { setShowAuth(false); setStep('identify'); setError(''); }}>✕</button>
+        }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>✕</button>
 
         {step === 'identify' && (
           <>
@@ -73,17 +73,19 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
                 </div>
               )}
 
-              <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
-                  {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
-                </label>
-                <input
-                  type={step === 'otp' ? 'text' : 'password'} required
-                  placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
-                />
-              </div>
+              {(!(step === 'signup' && !identifier.includes('@'))) && (
+                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>
+                    {step === 'otp' ? 'VERIFICATION CODE' : 'PASSWORD'}
+                  </label>
+                  <input
+                    type={step === 'otp' ? 'text' : 'password'} required
+                    placeholder={step === 'otp' ? 'Enter 6-digit code' : '••••••••'}
+                    value={password} onChange={e => setPassword(e.target.value)}
+                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
+                  />
+                </div>
+              )}
 
               {error && <div style={{color: 'var(--red)', fontSize: '13px', textAlign: 'center'}}>{error}</div>}
 
@@ -92,7 +94,7 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
                 background: 'linear-gradient(135deg, var(--teal), #0891b2)', color: '#fff',
                 fontWeight: '700', cursor: 'pointer'
               }}>
-                {loading ? 'Processing...' : step === 'login' ? 'Sign In' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
+                {loading ? 'Processing...' : step === 'login' ? 'Sign In' : (step === 'signup' && !identifier.includes('@')) ? 'Continue' : step === 'signup' ? 'Create Account' : 'Verify & Enter'}
               </button>
             </form>
           </>
