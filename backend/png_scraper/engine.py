@@ -379,21 +379,32 @@ class PNGScraper(ABC):
         self._page = None
 
     @abstractmethod
-    async def scrape(self, context) -> list[Listing]:
+    async def scrape(self, context, on_progress: Optional[Callable[[int, int], Any]] = None) -> list[Listing]:
         """Perform the actual scrape. Receives a ready BrowserContext."""
         ...
 
-    async def run(self) -> list[Listing]:
+    async def run(self, on_progress: Optional[Callable[[int, int], Any]] = None) -> list[Listing]:
         """Full lifecycle: launch browser → scrape → close → return listings."""
         from playwright.async_api import async_playwright
         log.info(f"[{self.SOURCE_SITE}] Starting scraper (headless={self.headless})")
         results: list[Listing] = []
         async with async_playwright() as pw:
-            browser, context = await new_stealth_context(pw, self.headless)
+            try:
+                browser, context = await asyncio.wait_for(
+                    new_stealth_context(pw, self.headless),
+                    timeout=60
+                )
+            except asyncio.TimeoutError:
+                log.error(f"[{self.SOURCE_SITE}] Browser launch timed out")
+                return []
+
             try:
                 self._page = await context.new_page()
                 # 5-minute timeout per source to prevent hanging the whole job
-                results = await asyncio.wait_for(self.scrape(context), timeout=300)
+                results = await asyncio.wait_for(
+                    self.scrape(context, on_progress=on_progress),
+                    timeout=300
+                )
                 log.info(f"[{self.SOURCE_SITE}] ✓ Collected {len(results)} listings")
             except asyncio.TimeoutError:
                 log.error(f"[{self.SOURCE_SITE}] Scrape timed out after 300s")

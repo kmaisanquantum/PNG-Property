@@ -203,7 +203,7 @@ class GeneralAgencyScraper(PNGScraper):
         self.cfg = config
         self.SOURCE_SITE = config.source_site
 
-    async def scrape(self, context) -> list[Listing]:
+    async def scrape(self, context, on_progress=None) -> list[Listing]:
         page = self._page
         cfg  = self.cfg
         results: list[Listing] = []
@@ -261,16 +261,20 @@ class GeneralAgencyScraper(PNGScraper):
                     pass
                 break
 
+            new_count = 0
             for card in cards:
                 try:
                     listing = await _parse_card(card, cfg, base_url)
                     if listing and listing.listing_id not in seen_ids:
                         seen_ids.add(listing.listing_id)
                         results.append(listing)
+                        new_count += 1
                 except Exception as e:
                     log.debug(f"[{cfg.source_site}] Parse error: {e}")
 
             log.info(f"[{cfg.source_site}] Running total: {len(results)}")
+            if on_progress:
+                on_progress(new_count, page_num)
 
             # Next page check
             has_next = False

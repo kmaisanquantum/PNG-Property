@@ -371,7 +371,7 @@ function ScrapePanel({onClose}) {
               <div style={{height:"100%",width:`${job.progress||0}%`,background:`linear-gradient(90deg,${C.teal},${C.violet})`,borderRadius:4,transition:"width .5s ease"}}/>
             </div>
             <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.text2}}>
-              <span>{job.current_source ? `Scraping ${job.current_source} p.${job.current_page}…` : job.status}</span>
+              <span>{job.current_source ? `Scraping ${job.current_source}…` : job.status}</span>
               <span>{job.collected||0} listings collected</span>
             </div>
           </div>

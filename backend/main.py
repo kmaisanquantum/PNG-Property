@@ -273,8 +273,9 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
 
     def on_progress(source_name, count, progress_pct):
         if job_id in scrape_jobs:
+            current_total = scrape_jobs[job_id].get("collected", 0)
             scrape_jobs[job_id].update({
-                "collected": scrape_jobs[job_id].get("collected", 0) + count,
+                "collected": current_total + count,
                 "progress": round(5 + (progress_pct * 0.9)),  # Scale 0-100 to 5-95
                 "current_source": source_name
             })

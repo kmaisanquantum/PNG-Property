@@ -163,7 +163,7 @@ class HausplesScraper(PNGScraper):
             raw_text    = raw_text,
         )
 
-    async def scrape(self, context) -> list[Listing]:
+    async def scrape(self, context, on_progress=None) -> list[Listing]:
         page = self._page
         results: list[Listing] = []
         seen_ids: set[str] = set()
@@ -202,16 +202,20 @@ class HausplesScraper(PNGScraper):
                 log.warning(f"[{self.SOURCE_SITE}] No cards found on page {page_num} — stopping pagination")
                 break
 
+            new_count = 0
             for card in cards:
                 try:
                     listing = await self._parse_card(card)
                     if listing and listing.listing_id not in seen_ids:
                         seen_ids.add(listing.listing_id)
                         results.append(listing)
+                        new_count += 1
                 except Exception as e:
                     log.debug(f"[{self.SOURCE_SITE}] Card parse error: {e}")
 
             log.info(f"[{self.SOURCE_SITE}] Running total: {len(results)} listings")
+            if on_progress:
+                on_progress(new_count, page_num)
 
             # Check for next page
             has_next = False

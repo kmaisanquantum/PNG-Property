@@ -197,7 +197,7 @@ class ProfessionalsScraper(PNGScraper):
         super().__init__(headless)
         self.max_pages = max_pages
 
-    async def scrape(self, context) -> list[Listing]:
+    async def scrape(self, context, on_progress=None) -> list[Listing]:
         page = self._page
         results: list[Listing] = []
         seen_ids: set[str] = set()
@@ -235,16 +235,20 @@ class ProfessionalsScraper(PNGScraper):
                 log.warning(f"[Professionals] No cards on page {page_num}")
                 break
 
+            new_count = 0
             for card in cards:
                 try:
                     listing = await _parse_card(card)
                     if listing and listing.listing_id not in seen_ids:
                         seen_ids.add(listing.listing_id)
                         results.append(listing)
+                        new_count += 1
                 except Exception as e:
                     log.debug(f"[Professionals] Parse error: {e}")
 
             log.info(f"[Professionals] Running total: {len(results)}")
+            if on_progress:
+                on_progress(new_count, page_num)
 
             # WordPress next-page detection
             has_next = False
