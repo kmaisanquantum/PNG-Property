@@ -450,7 +450,7 @@ def get_source_list(current_user: User = Depends(get_current_user)):
         "LJ Hooker", "Ray White PNG", "Strickland Real Estate", "The Professionals",
         "Century 21", "Budget Real Estate", "Arthur Strachan", "DAC Real Estate",
         "Kenmok Real Estate", "Pacific Palms", "Credit Corp", "Nambawan Super",
-        "Edai Town", "Facebook Marketplace"
+        "Edai Town", "Tuhava", "Facebook Marketplace"
     ]}
 
 # ── Optional: serve built React SPA from backend (single-service mode) ─────────

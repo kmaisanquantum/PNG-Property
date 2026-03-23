@@ -1,21 +1,16 @@
 """
 png_scraper/scrapers/hausples.py
 ─────────────────────────────────────────────────────────────────────────────
-HausplesScraper  —  https://www.hausples.com.pg/rent/
+HausplesScraper  —  Adaptive scraper for Hausples-powered portals:
+    • https://www.hausples.com.pg
+    • https://www.pngrealestate.com.pg
+    • https://www.pngbuynrent.com
 
-Hausples is built on a React SPA. Strategy:
+Strategy:
     1. Navigate the /rent/ listing grid.
     2. Wait for JS to render the property cards.
     3. Extract card-level data (title, price, location, href).
-    4. Optionally deep-dive each listing for extra fields.
-    5. Paginate via the "next page" button until exhausted.
-
-Selector notes (valid as of 2024 — update if site redesigns):
-    Cards  : article.property-card  |  div[data-testid="property-card"]
-    Title  : h2.property-card__title  |  .listing-title
-    Price  : .property-card__price  |  [class*="price"]
-    Location: .property-card__location  |  [class*="location"]
-    Link   : a.property-card__link  |  a[href*="/property/"]
+    4. Paginate via the "next page" button until exhausted.
 """
 
 from __future__ import annotations
@@ -36,9 +31,8 @@ from png_scraper.engine import (
 
 log = logging.getLogger("png_scraper.hausples")
 
-BASE_URL    = "https://www.hausples.com.pg"
-RENT_URL    = f"{BASE_URL}/rent/"
-SOURCE_SITE = "Hausples"
+DEFAULT_BASE_URL = "https://www.hausples.com.pg"
+DEFAULT_SOURCE   = "Hausples"
 
 # ── selector groups (try in order until one matches) ─────────────────────────
 
@@ -123,56 +117,57 @@ async def _first_attr(element, selectors: list[str], attr: str) -> str:
     return ""
 
 
-async def _parse_card(card, page_url: str) -> Optional[Listing]:
-    """Extract one Listing from a Hausples property card element."""
-    title    = await _first_text(card, TITLE_SELECTORS)
-    price_r  = await _first_text(card, PRICE_SELECTORS)
-    location = await _first_text(card, LOCATION_SELECTORS)
-    href     = await _first_attr(card, LINK_SELECTORS, "href")
-
-    if not href:
-        return None
-    url = href if href.startswith("http") else f"{BASE_URL}{href}"
-
-    # Pull any additional text for suburb / bedroom detection
-    raw_text = await _first_text(card, ["*"])   # full card text
-
-    if not title:
-        title = f"Property — {location}" if location else "Hausples Listing"
-
-    return make_listing(
-        source_site = SOURCE_SITE,
-        title       = title,
-        price_raw   = price_r,
-        location    = location,
-        listing_url = url,
-        is_verified = True,
-        raw_text    = raw_text,
-    )
-
-
 class HausplesScraper(PNGScraper):
     """
-    Dedicated scraper for https://www.hausples.com.pg/rent/
+    Dedicated scraper for Hausples-powered sites (React SPA).
 
     Features:
-    • Multiple fallback card selectors (handles site redesigns)
-    • Automatic pagination (up to max_pages)
-    • Lazy-load scroll trigger before extracting cards
+    • Multiple fallback card selectors
+    • Automatic pagination
+    • Lazy-load scroll trigger
     • Block image/font requests for speed
     """
 
-    SOURCE_SITE = SOURCE_SITE
     IS_VERIFIED = True
 
-    def __init__(self, max_pages: int = 5, headless: bool = True):
+    def __init__(self, base_url: str = DEFAULT_BASE_URL, source_site: str = DEFAULT_SOURCE, max_pages: int = 5, headless: bool = True):
         super().__init__(headless)
+        self.base_url = base_url.rstrip("/")
+        self.SOURCE_SITE = source_site
         self.max_pages = max_pages
+
+    async def _parse_card(self, card) -> Optional[Listing]:
+        """Extract one Listing from a Hausples property card element."""
+        title    = await _first_text(card, TITLE_SELECTORS)
+        price_r  = await _first_text(card, PRICE_SELECTORS)
+        location = await _first_text(card, LOCATION_SELECTORS)
+        href     = await _first_attr(card, LINK_SELECTORS, "href")
+
+        if not href:
+            return None
+        url = href if href.startswith("http") else f"{self.base_url}{href}"
+
+        # Pull any additional text for suburb / bedroom detection
+        raw_text = await _first_text(card, ["*"])   # full card text
+
+        if not title:
+            title = f"Property — {location}" if location else f"{self.SOURCE_SITE} Listing"
+
+        return make_listing(
+            source_site = self.SOURCE_SITE,
+            title       = title,
+            price_raw   = price_r,
+            location    = location,
+            listing_url = url,
+            is_verified = True,
+            raw_text    = raw_text,
+        )
 
     async def scrape(self, context) -> list[Listing]:
         page = self._page
         results: list[Listing] = []
         seen_ids: set[str] = set()
+        rent_url = f"{self.base_url}/rent/"
 
         # Block heavy assets we don't need
         await page.route(
@@ -181,8 +176,8 @@ class HausplesScraper(PNGScraper):
         )
 
         for page_num in range(1, self.max_pages + 1):
-            url = RENT_URL if page_num == 1 else f"{RENT_URL}?page={page_num}"
-            log.info(f"[Hausples] Page {page_num}/{self.max_pages} → {url}")
+            url = rent_url if page_num == 1 else f"{rent_url}?page={page_num}"
+            log.info(f"[{self.SOURCE_SITE}] Page {page_num}/{self.max_pages} → {url}")
 
             if not await self._goto(url):
                 break
@@ -198,25 +193,25 @@ class HausplesScraper(PNGScraper):
                     await page.wait_for_selector(sel, timeout=8_000)
                     cards = await page.query_selector_all(sel)
                     if cards:
-                        log.info(f"[Hausples] Selector '{sel}' matched {len(cards)} cards")
+                        log.info(f"[{self.SOURCE_SITE}] Selector '{sel}' matched {len(cards)} cards")
                         break
                 except Exception:
                     pass
 
             if not cards:
-                log.warning(f"[Hausples] No cards found on page {page_num} — stopping pagination")
+                log.warning(f"[{self.SOURCE_SITE}] No cards found on page {page_num} — stopping pagination")
                 break
 
             for card in cards:
                 try:
-                    listing = await _parse_card(card, url)
+                    listing = await self._parse_card(card)
                     if listing and listing.listing_id not in seen_ids:
                         seen_ids.add(listing.listing_id)
                         results.append(listing)
                 except Exception as e:
-                    log.debug(f"[Hausples] Card parse error: {e}")
+                    log.debug(f"[{self.SOURCE_SITE}] Card parse error: {e}")
 
-            log.info(f"[Hausples] Running total: {len(results)} listings")
+            log.info(f"[{self.SOURCE_SITE}] Running total: {len(results)} listings")
 
             # Check for next page
             has_next = False
@@ -230,7 +225,7 @@ class HausplesScraper(PNGScraper):
                     pass
 
             if not has_next:
-                log.info("[Hausples] No next-page button found — pagination complete")
+                log.info(f"[{self.SOURCE_SITE}] No next-page button found — pagination complete")
                 break
 
             await sleep_human(2.0, 4.5)

@@ -772,7 +772,8 @@ const RESOURCES_DATA = [
       { name: "Pacific Palms Property", url: "https://www.pacificpalmsproperty.com.pg", desc: "Steamships Group (commercial/industrial/residential)." },
       { name: "Credit Corp Properties", url: "https://www.creditcorporation.com.pg/properties", desc: "High-end assets like Era Matana/Dorina." },
       { name: "Nambawan Super", url: "https://www.nambawansuper.com.pg/property", desc: "Large owner of various residential estates." },
-      { name: "Edai Town", url: "https://www.edaitown.com.pg", desc: "Large-scale residential development near POM." }
+      { name: "Edai Town", url: "https://www.edaitown.com.pg", desc: "Large-scale residential development near POM." },
+      { name: "Tuhava", url: "https://tuhava.com", desc: "Eco-friendly planned township and residential community." }
     ]
   }
 ];
