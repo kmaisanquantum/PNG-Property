@@ -1,11 +1,12 @@
 # render.yaml — Render Infrastructure Blueprint
-# Unified deployment: FastAPI backend serving React frontend via Docker
+# Split deployment: FastAPI Web Service and React Static Site
 
 services:
+  # ── FastAPI Web Service ─────────────────────────────────────────────────────
   - type: web
     name: png-property-api
     runtime: docker
-    dockerContext: .
+    dockerContext: backend
     dockerfilePath: Dockerfile
     plan: free
     region: singapore
@@ -29,3 +30,16 @@ services:
         value: "*"
       - key: OUTPUT_FILE
         value: output/png_listings_latest.json
+
+  # ── React Static Site ───────────────────────────────────────────────────────
+  - type: static
+    name: png-property-dashboard
+    buildCommand: cd frontend && npm install && npm run build
+    publishPath: frontend/dist
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: png-property-api
+          property: url
