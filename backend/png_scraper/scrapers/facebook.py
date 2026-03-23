@@ -265,20 +265,31 @@ class FacebookScraper(PNGScraper):
         self.email    = email
         self.password = password
 
-    async def run(self) -> list[Listing]:
+    async def run(self, on_progress: Optional[Callable[[int, int], Any]] = None) -> list[Listing]:
         """Override run() to inject saved session into context."""
         from playwright.async_api import async_playwright
         log.info(f"[FB] Starting scraper (headless={self.headless})")
         results: list[Listing] = []
 
         async with async_playwright() as pw:
-            browser, context = await new_stealth_context(
-                pw, self.headless, session_file=SESSION_FILE
-            )
+            try:
+                browser, context = await asyncio.wait_for(
+                    new_stealth_context(pw, self.headless, session_file=SESSION_FILE),
+                    timeout=60
+                )
+            except asyncio.TimeoutError:
+                log.error("[FB] Browser launch timed out")
+                return []
+
             try:
                 self._page = await context.new_page()
-                results = await self.scrape(context)
+                results = await asyncio.wait_for(
+                    self.scrape(context, on_progress=on_progress),
+                    timeout=300
+                )
                 log.info(f"[FB] ✓ Collected {len(results)} listings")
+            except asyncio.TimeoutError:
+                log.error("[FB] Scrape timed out after 300s")
             except Exception as exc:
                 log.error(f"[FB] Fatal: {exc}", exc_info=True)
             finally:
@@ -290,7 +301,7 @@ class FacebookScraper(PNGScraper):
                 await browser.close()
         return results
 
-    async def scrape(self, context) -> list[Listing]:
+    async def scrape(self, context, on_progress=None) -> list[Listing]:
         page = self._page
         results: list[Listing] = []
         seen_ids: set[str] = set()
@@ -325,6 +336,7 @@ class FacebookScraper(PNGScraper):
             await sleep_human(2.0, 4.5)
 
             # Collect cards visible so far
+            new_count = 0
             for sel in _CARD_SELECTORS:
                 try:
                     cards = await page.query_selector_all(sel)
@@ -346,12 +358,15 @@ class FacebookScraper(PNGScraper):
                         if listing.listing_id not in seen_ids:
                             seen_ids.add(listing.listing_id)
                             results.append(listing)
+                            new_count += 1
                     if results:
                         break
                 except Exception as e:
                     log.debug(f"[FB] Selector error: {e}")
 
             log.info(f"[FB] Running total: {len(results)} unique listings")
+            if on_progress:
+                on_progress(new_count, round_num)
 
             # Longer breaks every 3 rounds (human reading simulation)
             if round_num % 3 == 0:

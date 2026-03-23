@@ -123,7 +123,7 @@ async def run_all(
     headless: bool = True,
     sources: list[str] = None,
     max_pages: int = 5,
-    agency_concurrency: int = 3,
+    agency_concurrency: int = 1,
     on_progress: Optional[Callable[[str, int, float], Any]] = None,
 ) -> list[Listing]:
     """
@@ -141,60 +141,68 @@ async def run_all(
         Unified, deduplicated list[Listing]
     """
     all_results: list[Listing] = []
-    tasks: list[tuple[str, Any]] = []
+    instance_tasks: list[tuple[str, Any]] = []
 
     def _want(name: str) -> bool:
         return sources is None or name.lower() in [s.lower() for s in sources]
 
     # ── portals ────────────────────────────────────────────────────────────
     if _want("hausples"):
-        tasks.append(("Hausples", HausplesScraper(max_pages=max_pages, headless=headless).run()))
+        instance_tasks.append(("Hausples", HausplesScraper(max_pages=max_pages, headless=headless)))
 
     if _want("png real estate"):
-        tasks.append(("PNG Real Estate", HausplesScraper(
+        instance_tasks.append(("PNG Real Estate", HausplesScraper(
             base_url="https://www.pngrealestate.com.pg",
             source_site="PNG Real Estate",
             max_pages=max_pages,
             headless=headless
-        ).run()))
+        )))
 
     if _want("png buy n rent"):
-        tasks.append(("PNG Buy n Rent", HausplesScraper(
+        instance_tasks.append(("PNG Buy n Rent", HausplesScraper(
             base_url="https://www.pngbuynrent.com",
             source_site="PNG Buy n Rent",
             max_pages=max_pages,
             headless=headless
-        ).run()))
+        )))
 
     if _want("professionals"):
-        tasks.append(("The Professionals", ProfessionalsScraper(max_pages=max_pages, headless=headless).run()))
+        instance_tasks.append(("The Professionals", ProfessionalsScraper(max_pages=max_pages, headless=headless)))
 
     # ── agency sites ──────────────────────────────────────────────────────
     for cfg in AGENCY_CONFIGS:
         if _want(cfg.source_site) or _want("agencies"):
-            tasks.append((cfg.source_site, GeneralAgencyScraper(cfg, headless=headless).run()))
+            instance_tasks.append((cfg.source_site, GeneralAgencyScraper(cfg, headless=headless)))
 
     # ── Facebook ────────────────────────────────────────────────────────────
     if include_facebook and _want("facebook"):
-        tasks.append(("Facebook Marketplace", FacebookScraper(scroll_rounds=8, headless=headless).run()))
+        instance_tasks.append(("Facebook Marketplace", FacebookScraper(scroll_rounds=8, headless=headless)))
 
     # ── run all ─────────────────────────────────────────────────────────────
-    log.info(f"Launching {len(tasks)} scrapers with concurrency={agency_concurrency}...")
+    log.info(f"Launching {len(instance_tasks)} scrapers with concurrency={agency_concurrency}...")
     t0 = time.perf_counter()
 
     completed_count = 0
-    total_tasks = len(tasks)
+    total_tasks = len(instance_tasks)
     sem = asyncio.Semaphore(agency_concurrency)
 
-    async def _wrap_task(name: str, coro):
+    async def _wrap_task(name: str, scraper_instance: Any):
         nonlocal completed_count
         async with sem:
             try:
-                res = await coro
+                def _on_sub_progress(count: int, page: int):
+                    if on_progress:
+                        # progress_pct is relative to total scrapers
+                        # We use completed_count / total_tasks as baseline
+                        # and add a small bit based on current scraper progress?
+                        # Or just report it plainly.
+                        progress_pct = (completed_count / total_tasks) * 100
+                        on_progress(name, count, progress_pct)
+
+                res = await scraper_instance.run(on_progress=_on_sub_progress)
                 completed_count += 1
                 if on_progress:
-                    count = len(res) if isinstance(res, list) else 0
-                    on_progress(name, count, (completed_count / total_tasks) * 100)
+                    on_progress(name, 0, (completed_count / total_tasks) * 100)
                 return res
             except Exception as e:
                 completed_count += 1
@@ -203,7 +211,7 @@ async def run_all(
                     on_progress(name, 0, (completed_count / total_tasks) * 100)
                 return e
 
-    batches = await asyncio.gather(*[_wrap_task(name, coro) for name, coro in tasks])
+    batches = await asyncio.gather(*[_wrap_task(name, inst) for name, inst in instance_tasks])
     for batch in batches:
         if isinstance(batch, list):
             all_results.extend(batch)
@@ -225,7 +233,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--no-fb",    action="store_true",       help="Skip Facebook Marketplace")
     p.add_argument("--visible",  action="store_true",       help="Show browser windows")
     p.add_argument("--pages",    type=int, default=5,       help="Pages per scraper (default 5)")
-    p.add_argument("--concurrency", type=int, default=3,   help="Parallel agency scrapers (default 3)")
+    p.add_argument("--concurrency", type=int, default=1,   help="Parallel agency scrapers (default 1)")
     p.add_argument("--sources",  nargs="*",                 help="Whitelist scrapers by name")
     p.add_argument("--out-dir",  default="output",          help="Output directory (default ./output)")
     return p.parse_args()
