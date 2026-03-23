@@ -23,6 +23,7 @@ import logging
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional, Callable, Any
 
 from png_scraper.engine import Listing, log
 from png_scraper.scrapers.hausples       import HausplesScraper
@@ -123,6 +124,7 @@ async def run_all(
     sources: list[str] = None,
     max_pages: int = 5,
     agency_concurrency: int = 3,
+    on_progress: Optional[Callable[[str, int, float], Any]] = None,
 ) -> list[Listing]:
     """
     Orchestrate all scrapers with a concurrency cap.
@@ -133,63 +135,77 @@ async def run_all(
         sources:             Whitelist of scraper names (None = all)
         max_pages:           Pages per portal scraper
         agency_concurrency:  Parallel agency scrapers
+        on_progress:         Callback(source_name, count, progress_pct)
 
     Returns:
         Unified, deduplicated list[Listing]
     """
     all_results: list[Listing] = []
-    tasks = []
+    tasks: list[tuple[str, Any]] = []
 
     def _want(name: str) -> bool:
         return sources is None or name.lower() in [s.lower() for s in sources]
 
     # ── portals ────────────────────────────────────────────────────────────
     if _want("hausples"):
-        tasks.append(HausplesScraper(max_pages=max_pages, headless=headless).run())
+        tasks.append(("Hausples", HausplesScraper(max_pages=max_pages, headless=headless).run()))
 
     if _want("png real estate"):
-        tasks.append(HausplesScraper(
+        tasks.append(("PNG Real Estate", HausplesScraper(
             base_url="https://www.pngrealestate.com.pg",
             source_site="PNG Real Estate",
             max_pages=max_pages,
             headless=headless
-        ).run())
+        ).run()))
 
     if _want("png buy n rent"):
-        tasks.append(HausplesScraper(
+        tasks.append(("PNG Buy n Rent", HausplesScraper(
             base_url="https://www.pngbuynrent.com",
             source_site="PNG Buy n Rent",
             max_pages=max_pages,
             headless=headless
-        ).run())
+        ).run()))
 
     if _want("professionals"):
-        tasks.append(ProfessionalsScraper(max_pages=max_pages, headless=headless).run())
+        tasks.append(("The Professionals", ProfessionalsScraper(max_pages=max_pages, headless=headless).run()))
 
-    # ── agency sites (batched with semaphore) ─────────────────────────────
-    sem = asyncio.Semaphore(agency_concurrency)
-    async def _agency(cfg):
-        async with sem:
-            if not _want(cfg.source_site) and not _want("agencies"):
-                return []
-            return await GeneralAgencyScraper(cfg, headless=headless).run()
-
+    # ── agency sites ──────────────────────────────────────────────────────
     for cfg in AGENCY_CONFIGS:
-        tasks.append(_agency(cfg))
+        if _want(cfg.source_site) or _want("agencies"):
+            tasks.append((cfg.source_site, GeneralAgencyScraper(cfg, headless=headless).run()))
 
     # ── Facebook ────────────────────────────────────────────────────────────
     if include_facebook and _want("facebook"):
-        tasks.append(FacebookScraper(scroll_rounds=8, headless=headless).run())
+        tasks.append(("Facebook Marketplace", FacebookScraper(scroll_rounds=8, headless=headless).run()))
 
     # ── run all ─────────────────────────────────────────────────────────────
-    log.info(f"Launching {len(tasks)} scrapers...")
+    log.info(f"Launching {len(tasks)} scrapers with concurrency={agency_concurrency}...")
     t0 = time.perf_counter()
 
-    batches = await asyncio.gather(*tasks, return_exceptions=True)
+    completed_count = 0
+    total_tasks = len(tasks)
+    sem = asyncio.Semaphore(agency_concurrency)
+
+    async def _wrap_task(name: str, coro):
+        nonlocal completed_count
+        async with sem:
+            try:
+                res = await coro
+                completed_count += 1
+                if on_progress:
+                    count = len(res) if isinstance(res, list) else 0
+                    on_progress(name, count, (completed_count / total_tasks) * 100)
+                return res
+            except Exception as e:
+                completed_count += 1
+                log.error(f"Scraper '{name}' failed: {e}")
+                if on_progress:
+                    on_progress(name, 0, (completed_count / total_tasks) * 100)
+                return e
+
+    batches = await asyncio.gather(*[_wrap_task(name, coro) for name, coro in tasks])
     for batch in batches:
-        if isinstance(batch, Exception):
-            log.error(f"Scraper error: {batch}")
-        elif isinstance(batch, list):
+        if isinstance(batch, list):
             all_results.extend(batch)
 
     elapsed = time.perf_counter() - t0
