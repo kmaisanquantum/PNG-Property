@@ -442,7 +442,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         </div>
       </section>
 
-      <section className="preview-section">
+      <section className="preview-section" id="suburbs">
         <div className="features-grid">
           <div className="feature-card reveal">
             <h3>Price Heatmap</h3>
@@ -459,6 +459,27 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         </div>
       </section>
 
+
+      <section className="stats-section reveal" id="pricing" style={{paddingTop: 0, borderTop: '1px solid var(--border)'}}>
+        <div style={{gridColumn: '1 / -1', textAlign: 'center', marginBottom: 40, marginTop: 80}}>
+          <h2 style={{fontFamily: 'var(--font-d)', fontSize: '42px'}}>PRICING PLANS</h2>
+          <p style={{color: 'var(--text1)', maxWidth: '600px', margin: '10px auto'}}>Get the full intelligence package for PNG's property market.</p>
+        </div>
+        <div className="stat-grid" style={{gridColumn: '1 / -1', maxWidth: '400px', margin: '0 auto', width: '100%'}}>
+          <div className="stat-card reveal" style={{textAlign: 'center', border: '1px solid var(--teal)', background: 'rgba(20,184,200,0.05)'}}>
+            <div style={{fontSize: '12px', color: 'var(--teal)', fontWeight: 700, letterSpacing: '0.1em', marginBottom: 10}}>LIFETIME ACCESS</div>
+            <div style={{fontSize: '48px', color: 'var(--text0)', fontFamily: 'var(--font-d)'}}>FREE<span style={{fontSize: 20, color: 'var(--text2)'}}>*</span></div>
+            <p style={{fontSize: '12px', color: 'var(--text2)', marginBottom: 20}}>*Limited time offer for early adopters</p>
+            <ul style={{listStyle: 'none', padding: 0, margin: '20px 0', color: 'var(--text1)', fontSize: 14, textAlign: 'left', display: 'inline-block'}}>
+              <li style={{marginBottom: 10}}>✓ Unlimited Listing Access</li>
+              <li style={{marginBottom: 10}}>✓ Real-time Heatmaps</li>
+              <li style={{marginBottom: 10}}>✓ Middleman Detection</li>
+              <li style={{marginBottom: 10}}>✓ 24/7 Market Monitoring</li>
+            </ul>
+            <button className="btn-primary" style={{width: '100%', marginTop: 20}} onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>Join Free Now →</button>
+          </div>
+        </div>
+      </section>
       <footer style={{padding: '40px 72px', borderTop: '1px solid var(--border)', textAlign: 'center'}}>
         <p>© 2026 PNG Property Intelligence Dashboard. Built for Papua New Guinea by <a href="https://www.dspng.tech" target="_blank" rel="noopener noreferrer" style={{color: 'var(--teal)', textDecoration: 'none', fontWeight: '600'}}>Deeps Systems</a>.</p>
       </footer>
