@@ -370,7 +370,7 @@ const NAV_ITEMS = [
   {id:"heatmap",   icon:"◉", label:"Heatmap"},
   {id:"analytics", icon:"∿", label:"Analytics"},
   {id:"flags",     icon:"⚑", label:"Flagged"},
-  {id:"resources", icon:"🔗", label:"Resources"},
+  {id:"sources", icon:"📡", label:"Sources"},
 ];
 
 function Sidebar({active, onNav, onLogout, user}) {
@@ -394,7 +394,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
-  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings",resources:"Market Resources"};
+  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings",sources:"Market Sources"};
   return (
     <div style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -748,7 +748,7 @@ const RESOURCES_DATA = [
     items: [
       { name: "Hausples.com.pg", url: "https://www.hausples.com.pg", desc: "Largest active portal (rentals, sales, land)." },
       { name: "PNGRealEstate.com.pg", url: "https://www.pngrealestate.com.pg", desc: "Major residential and commercial listings." },
-      { name: "MarketMeri", url: "https://www.marketmeri.com", desc: "General classifieds with very active housing section." },
+      { name: "Marketmeri.com (Real Estate Section)", url: "https://www.marketmeri.com", desc: "General classifieds with very active housing section." },
       { name: "PNGbuynrent.com", url: "https://www.pngbuynrent.com", desc: "Simplified property search platform." }
     ]
   },
@@ -757,9 +757,9 @@ const RESOURCES_DATA = [
     items: [
       { name: "LJ Hooker PNG", url: "https://www.ljhooker.com.pg", desc: "Established name, Port Moresby focus." },
       { name: "Ray White PNG", url: "https://www.raywhitepng.com", desc: "Large residential and commercial portfolio." },
-      { name: "Strickland RE", url: "https://www.sre.com.pg", desc: "Sales and high-end property management." },
+      { name: "Strickland Real Estate", url: "https://www.sre.com.pg", desc: "Sales and high-end property management." },
       { name: "The Professionals", url: "https://www.theprofessionals.com.pg", desc: "Broad listings including Lae market." },
-      { name: "Century 21", url: "https://www.c21.com.pg", desc: "Global brand agency in PNG." },
+      { name: "Century 21 Siule Real Estate", url: "https://www.c21.com.pg", desc: "Global brand agency in PNG." },
       { name: "Budget Real Estate", url: "https://www.budgetrealestatepng.com", desc: "Mid-range and affordable housing." },
       { name: "Arthur Strachan", url: "https://www.arthurstrachan.com.pg", desc: "Go-to for Lae and Morobe Province." },
       { name: "DAC Real Estate", url: "https://www.dac.com.pg", desc: "Specialized property and management services." },
@@ -770,8 +770,8 @@ const RESOURCES_DATA = [
     category: "Developers & Management",
     items: [
       { name: "Pacific Palms Property", url: "https://www.pacificpalmsproperty.com.pg", desc: "Steamships Group (commercial/industrial/residential)." },
-      { name: "Credit Corp Properties", url: "https://www.creditcorporation.com.pg/properties", desc: "High-end assets like Era Matana/Dorina." },
-      { name: "Nambawan Super", url: "https://www.nambawansuper.com.pg/property", desc: "Large owner of various residential estates." },
+      { name: "Credit Corporation Properties", url: "https://www.creditcorporation.com.pg/properties", desc: "High-end assets like Era Matana/Dorina." },
+      { name: "Nambawan Super (Property)", url: "https://www.nambawansuper.com.pg/property", desc: "Large owner of various residential estates." },
       { name: "Edai Town", url: "https://www.edaitown.com.pg", desc: "Large-scale residential development near POM." },
       { name: "Tuhava", url: "https://tuhava.com", desc: "Eco-friendly planned township and residential community." }
     ]
@@ -858,7 +858,7 @@ export default function App() {
             {view==="heatmap"  &&<HeatmapView/>}
             {view==="analytics"&&<AnalyticsView/>}
             {view==="flags"    &&<FlagsView/>}
-            {view==="resources"&&<ResourcesView/>}
+            {view==="sources"&&<ResourcesView/>}
           </div>
         </div>
       </div>

@@ -181,7 +181,7 @@ async def startup_event():
 
 def _mock_listings() -> list[dict]:
     suburbs=["Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile","Morata","Erima"]
-    sources=["Hausples","The Professionals","Ray White PNG","Century 21 PNG","MarketMeri","Facebook Marketplace","SRE PNG","DAC Properties"]
+    sources=["Hausples","The Professionals","Ray White PNG","Century 21 PNG","Marketmeri.com (Real Estate Section)","Facebook Marketplace","SRE PNG","DAC Properties"]
     types=["House","Apartment","Townhouse","Studio","Room","Compound"]
     no_verify={"Facebook Marketplace"}
     TIERS={"Gordons":1,"Waigani":1,"Badili":2,"Boroko":2,"Koki":2,"Tokarara":3,"Gerehu":3,"Hohola":3,"Morata":4,"Erima":4,"Six Mile":4,"Eight Mile":4}
@@ -446,10 +446,10 @@ def get_suburbs(current_user: User = Depends(get_current_user)): return {"suburb
 @app.get("/api/sources")
 def get_source_list(current_user: User = Depends(get_current_user)):
     return {"sources":[
-        "Hausples", "PNG Real Estate", "MarketMeri", "PNG Buy n Rent",
+        "Hausples", "PNG Real Estate", "Marketmeri.com (Real Estate Section)", "PNG Buy n Rent",
         "LJ Hooker", "Ray White PNG", "Strickland Real Estate", "The Professionals",
-        "Century 21", "Budget Real Estate", "Arthur Strachan", "DAC Real Estate",
-        "Kenmok Real Estate", "Pacific Palms", "Credit Corp", "Nambawan Super",
+        "Century 21 Siule Real Estate", "Budget Real Estate", "Arthur Strachan", "DAC Real Estate",
+        "Kenmok Real Estate", "Pacific Palms Property", "Credit Corporation Properties", "Nambawan Super (Property)",
         "Edai Town", "Tuhava", "Facebook Marketplace"
     ]}
 
