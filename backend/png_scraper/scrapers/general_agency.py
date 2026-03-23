@@ -110,18 +110,18 @@ class SiteConfig:
 
 
 AGENCY_CONFIGS: list[SiteConfig] = [
-    SiteConfig("MarketMeri",           "https://marketmeri.com/real-estate",              max_pages=8),
-    SiteConfig("SRE PNG",              "http://www.sre.com.pg/rentals",                   max_pages=5),
-    SiteConfig("Century 21 PNG",       "https://www.century21.com.pg/rent",               max_pages=5),
+    SiteConfig("Marketmeri.com (Real Estate Section)",           "https://marketmeri.com/real-estate",              max_pages=8),
+    SiteConfig("Strickland Real Estate",              "http://www.sre.com.pg/rentals",                   max_pages=5),
+    SiteConfig("Century 21 Siule Real Estate",       "https://www.century21.com.pg/rent",               max_pages=5),
     SiteConfig("Ray White PNG",        "https://www.raywhitepng.com/rent",                max_pages=5),
-    SiteConfig("Pacific Palms",        "http://www.pacificpalmsproperty.com.pg/rentals",  max_pages=4),
-    SiteConfig("DAC Properties",       "http://www.dac.com.pg/rentals",                   max_pages=4),
+    SiteConfig("Pacific Palms Property",        "http://www.pacificpalmsproperty.com.pg/rentals",  max_pages=4),
+    SiteConfig("DAC Real Estate",       "http://www.dac.com.pg/rentals",                   max_pages=4),
     SiteConfig("AAA Properties",       "http://www.aaaproperties.com.pg/rent",            max_pages=4),
     SiteConfig("Arthur Strachan",      "http://www.arthurstrachan.com.pg/rentals",        max_pages=4),
     SiteConfig("Kenmok Real Estate",   "https://www.kenmok.com.pg/",                      max_pages=2),
     SiteConfig("Tuhava",               "https://tuhava.com/houses/",                      max_pages=2),
-    SiteConfig("Credit Corp",          "https://creditcorpproperties.com/residential/",   max_pages=3),
-    SiteConfig("Nambawan Super",       "https://www.nambawansuper.com.pg/investment/property-portfolio/", max_pages=2),
+    SiteConfig("Credit Corporation Properties",          "https://creditcorpproperties.com/residential/",   max_pages=3),
+    SiteConfig("Nambawan Super (Property)",       "https://www.nambawansuper.com.pg/investment/property-portfolio/", max_pages=2),
 ]
 
 
