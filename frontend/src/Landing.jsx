@@ -385,9 +385,9 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
 
       <nav>
         <a href="#" className="nav-logo">PNG<span className="dot">●</span>PROPERTY</a>
-        <div className="nav-links">
+        <div className="nav-links"><a href="#how-it-works">Process</a>
           <a href="#features">Features</a>
-          <a href="#suburbs">Heatmap</a>
+          <a href="#suburbs">Suburbs</a>
           <a href="#pricing">Pricing</a>
         </div>
         <div className="nav-cta">
@@ -419,12 +419,55 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             <div className="scan-line"></div>
             <div style={{padding: '20px', textAlign: 'center'}}>
               <div style={{fontSize: '24px', marginBottom: '10px'}}>Live Analytics</div>
-              <div style={{height: '200px', background: 'var(--bg2)', borderRadius: '8px'}}></div>
+
+              <div style={{height: '240px', background: 'var(--bg2)', borderRadius: '12px', padding: '15px', textAlign: 'left', overflow: 'hidden', position: 'relative'}}>
+                <div style={{fontSize: '10px', color: 'var(--teal)', fontFamily: 'var(--font-m)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between'}}>
+                  <span>MARKET FEED</span>
+                  <span style={{opacity: 0.6}}>LIVE UPDATE • 4s AGO</span>
+                </div>
+                {[
+                  { s: 'Hausples', l: '3BR House, Waigani', p: 'K4,500', v: 'DEAL' },
+                  { s: 'Facebook', l: 'Studio, Boroko', p: 'K1,200', v: 'OVERPRICED' },
+                  { s: 'Ray White', l: '2BR Apt, Gordons', p: 'K5,500', v: 'FAIR' },
+                  { s: 'Professionals', l: '4BR House, Gerehu', p: 'K2,800', v: 'DEAL' },
+                  { s: 'Hausples', l: 'Townhouse, 8 Mile', p: 'K1,800', v: 'FAAL' }
+                ].map((item, idx) => (
+                  <div key={idx} style={{display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 0', borderBottom: '1px solid var(--border)', opacity: 1 - idx*0.15}}>
+                    <div style={{width: '6px', height: '6px', borderRadius: '50%', background: item.v === 'DEAL' ? 'var(--green)' : (item.v === 'OVERPRICED' ? 'var(--red)' : 'var(--amber)')}}></div>
+                    <div style={{flex: 1}}>
+                      <div style={{fontSize: '11px', color: 'var(--text0)', fontWeight: 600}}>{item.l}</div>
+                      <div style={{fontSize: '9px', color: 'var(--text2)'}}>{item.s} • {item.v}</div>
+                    </div>
+                    <div style={{fontSize: '11px', color: 'var(--teal)', fontFamily: 'var(--font-m)'}}>{item.p}</div>
+                  </div>
+                ))}
+                <div style={{position: 'absolute', bottom: 0, left: 0, right: 0, height: '40px', background: 'linear-gradient(transparent, var(--bg2))'}}></div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+
+      <section className="stats-section reveal" id="how-it-works" style={{paddingBottom: 0}}>
+        <div style={{gridColumn: '1 / -1', textAlign: 'center', marginBottom: 60}}>
+          <div style={{fontSize: '12px', color: 'var(--teal)', fontWeight: 700, letterSpacing: '0.1em', marginBottom: 12}}>THE PROCESS</div>
+          <h2 style={{fontFamily: 'var(--font-d)', fontSize: 'clamp(32px, 5vw, 48px)', lineHeight: 1.1}}>HOW IT WORKS</h2>
+        </div>
+        <div style={{gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px'}}>
+          {[
+            { step: '01', t: 'AGGREGATE', d: 'We scrape 10+ major property portals and Facebook Marketplace every 6 hours, centralizing thousands of fragmented listings.' },
+            { step: '02', t: 'NORMALISE', d: 'Our engine cleans inconsistent data—converting prices to monthly PGK, identifying property types, and verifying suburbs.' },
+            { step: '03', t: 'INTELLIGENCE', d: 'Listings are cross-referenced with agency benchmarks to score market value and detect inflated middleman markups.' }
+          ].map((item, idx) => (
+            <div key={idx} style={{padding: '30px', background: 'var(--bg1)', borderRadius: '16px', border: '1px solid var(--border)', position: 'relative'}}>
+              <div style={{fontSize: '48px', fontFamily: 'var(--font-d)', color: 'var(--teal)', opacity: 0.1, position: 'absolute', top: '15px', right: '20px'}}>{item.step}</div>
+              <h3 style={{fontSize: '18px', color: 'var(--text0)', marginBottom: '15px', fontFamily: 'var(--font-b)'}}>{item.t}</h3>
+              <p style={{fontSize: '14px', color: 'var(--text1)', lineHeight: 1.6}}>{item.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
       <section className="stats-section reveal" id="features">
         <div className="stats-left">
           <h2>THE PULSE OF PNG'S PROPERTY MARKET</h2>
@@ -445,7 +488,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
       <section className="preview-section" id="suburbs">
         <div className="features-grid">
           <div className="feature-card reveal">
-            <h3>Price Heatmap</h3>
+            <h3>Suburbs Heatmap</h3>
             <p>Visualise average rents by suburb. Compare Gordons vs Gerehu vs Boroko at a glance.</p>
           </div>
           <div className="feature-card reveal">
