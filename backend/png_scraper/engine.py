@@ -129,8 +129,11 @@ class Listing:
     listing_url:     str
     is_verified:     bool           # True for agency sites
     scraped_at:      str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    first_seen_at:   str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     property_type:   Optional[str] = None
     bedrooms:        Optional[int]  = None
+    sqm:             Optional[float] = None
+    is_for_sale:     bool = False
     raw_text:        str            = ""
 
     def to_dict(self) -> dict:
@@ -242,6 +245,28 @@ def extract_bedrooms(text: str) -> Optional[int]:
         return n if 1 <= n <= 20 else None
     return None
 
+_SQM_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|m2|m²|square\s*meters?)", re.I)
+
+def extract_sqm(text: str) -> Optional[float]:
+    m = _SQM_RE.search(text)
+    if m:
+        try:
+            val = float(m.group(1))
+            return val if 5 <= val <= 50000 else None
+        except ValueError:
+            return None
+    return None
+
+def detect_is_sale(text: str, url: str = "") -> bool:
+    t = (text + " " + url).lower()
+    if any(kw in t for kw in ["for sale", "selling", "/sale/", "price on application", "poa"]):
+        # But exclude mentions of "not for sale" or "rent" if it's dominant
+        if "for rent" in t or "to let" in t or "/rent/" in t:
+            # If both, we might need a better heuristic, but usually URL or title is specific
+            if "/sale/" in t or "for sale" in t: return True
+            return False
+        return True
+    return False
 
 # ── listing factory helper ───────────────────────────────────────────────────
 
@@ -256,6 +281,11 @@ def make_listing(
 ) -> Listing:
     price_k, _, conf = normalise_price(price_raw)
     combined = f"{title} {raw_text} {location}"
+    is_sale = detect_is_sale(combined, listing_url)
+
+    # If it's for sale, the "monthly price" normalized from a huge number
+    # might actually be the total price. We'll handle that in analytics.
+
     return Listing(
         listing_id      = hashlib.md5(f"{listing_url}:{price_raw}".encode()).hexdigest(),
         source_site     = source_site,
@@ -269,6 +299,8 @@ def make_listing(
         is_verified     = is_verified,
         property_type   = classify_type(combined),
         bedrooms        = extract_bedrooms(combined),
+        sqm             = extract_sqm(combined),
+        is_for_sale     = is_sale,
         raw_text        = raw_text[:400],
     )
 

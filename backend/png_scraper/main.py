@@ -148,22 +148,39 @@ async def run_all(
 
     # ── portals ────────────────────────────────────────────────────────────
     if _want("hausples"):
-        instance_tasks.append(("Hausples", HausplesScraper(max_pages=max_pages, headless=headless)))
+        instance_tasks.append(("Hausples Rent", HausplesScraper(max_pages=max_pages, headless=headless, mode="rent")))
+        instance_tasks.append(("Hausples Sale", HausplesScraper(max_pages=max_pages, headless=headless, mode="sale")))
 
     if _want("png real estate"):
-        instance_tasks.append(("PNG Real Estate", HausplesScraper(
+        instance_tasks.append(("PNG Real Estate Rent", HausplesScraper(
             base_url="https://www.pngrealestate.com.pg",
             source_site="PNG Real Estate",
             max_pages=max_pages,
-            headless=headless
+            headless=headless,
+            mode="rent"
+        )))
+        instance_tasks.append(("PNG Real Estate Sale", HausplesScraper(
+            base_url="https://www.pngrealestate.com.pg",
+            source_site="PNG Real Estate",
+            max_pages=max_pages,
+            headless=headless,
+            mode="sale"
         )))
 
     if _want("png buy n rent"):
-        instance_tasks.append(("PNG Buy n Rent", HausplesScraper(
+        instance_tasks.append(("PNG Buy n Rent Rent", HausplesScraper(
             base_url="https://www.pngbuynrent.com",
             source_site="PNG Buy n Rent",
             max_pages=max_pages,
-            headless=headless
+            headless=headless,
+            mode="rent"
+        )))
+        instance_tasks.append(("PNG Buy n Rent Sale", HausplesScraper(
+            base_url="https://www.pngbuynrent.com",
+            source_site="PNG Buy n Rent",
+            max_pages=max_pages,
+            headless=headless,
+            mode="sale"
         )))
 
     if _want("professionals"):

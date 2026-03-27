@@ -189,14 +189,29 @@ def _mock_listings() -> list[dict]:
     rng=random.Random(42); now=datetime.now(timezone.utc); listings=[]
     for i in range(240):
         suburb=rng.choice(suburbs); src=rng.choice(sources); ptype=rng.choice(types)
+        is_sale = rng.random() < 0.2
+
         beds=rng.choice([1,2,3,4,5]) if ptype not in ("Studio","Room") else 1
-        base=BASES[TIERS.get(suburb,3)-1]; price=max(800,int(rng.gauss(base,base*0.18)))
-        scraped=now-timedelta(hours=rng.randint(0,72))
+        base=BASES[TIERS.get(suburb,3)-1]
+
+        if is_sale:
+            price = int(rng.gauss(base * 12 * 10, base * 12 * 2))
+            price_raw = f"K{price:,}"
+        else:
+            price=max(800,int(rng.gauss(base,base*0.18)))
+            price_raw = f"K{price:,}/month"
+
+        scraped=now-timedelta(days=rng.randint(0,30), hours=rng.randint(0,24))
+        first_seen = scraped - timedelta(days=rng.randint(0,14))
+        sqm = rng.randint(40, 400) if ptype != "Room" else rng.randint(10, 25)
+
         listings.append({"listing_id":f"lst{i:04d}","source_site":src,"title":f"{beds} Bedroom {ptype} – {suburb}",
-            "price_raw":f"K{price:,}/month","price_monthly_k":price,"price_confidence":"high",
+            "price_raw":price_raw,"price_monthly_k":price,"price_confidence":"high",
             "location":f"{suburb}, NCD","suburb":suburb,"listing_url":f"https://hausples.com.pg/listing/{i+1}",
             "is_verified":src not in no_verify,"property_type":ptype,"bedrooms":beds,
-            "scraped_at":scraped.isoformat(),"raw_text":f"{beds} bedroom {ptype.lower()} in {suburb} K{price}/month"})
+            "sqm": sqm, "is_for_sale": is_sale,
+            "scraped_at":scraped.isoformat(),"first_seen_at": first_seen.isoformat(),
+            "raw_text":f"{beds} bedroom {ptype.lower()} in {suburb} {price_raw}"})
     return listings
 
 def _market_score(price:int,suburb:str)->dict:
@@ -206,16 +221,74 @@ def _market_score(price:int,suburb:str)->dict:
     return            {"label":"Fair","pct_vs_avg":pct,"color":"#facc15","benchmark_avg":avg}
 
 def _suburb_stats(listings):
-    grouped=defaultdict(list)
+    # Separate rent and sale
+    rent_grouped = defaultdict(list)
+    sale_grouped = defaultdict(list)
+    now = datetime.now(timezone.utc)
+
     for l in listings:
-        if l.get("suburb") and l.get("price_monthly_k"): grouped[l["suburb"]].append(l["price_monthly_k"])
-    result=[]
-    for suburb,prices in grouped.items():
-        srt=sorted(prices); n=len(srt); med=srt[n//2] if n%2 else (srt[n//2-1]+srt[n//2])//2
-        c=SUBURB_COORDS.get(suburb,{"lat":-9.44,"lng":147.18})
-        result.append({"suburb":suburb,"avg_price":int(sum(prices)/n),"median_price":med,
-                        "min_price":min(prices),"max_price":max(prices),"listings":n,"lat":c["lat"],"lng":c["lng"]})
-    return sorted(result,key=lambda x:-x["avg_price"])
+        sub = l.get("suburb")
+        if not sub: continue
+
+        if l.get("is_for_sale"):
+            sale_grouped[sub].append(l)
+        else:
+            rent_grouped[sub].append(l)
+
+    result = []
+    for sub in set(list(rent_grouped.keys()) + list(sale_grouped.keys())):
+        r_items = rent_grouped.get(sub, [])
+        s_items = sale_grouped.get(sub, [])
+
+        r_prices = [l["price_monthly_k"] for l in r_items if l.get("price_monthly_k")]
+        s_prices = [l["price_monthly_k"] for l in s_items if l.get("price_monthly_k")] # This is total price for sale
+
+        n_rent = len(r_prices)
+        avg_rent = int(sum(r_prices)/n_rent) if n_rent else 0
+
+        # Price per SQM
+        sqm_prices = []
+        for l in (r_items + s_items):
+            p = l.get("price_monthly_k")
+            s = l.get("sqm")
+            if p and s and s > 0:
+                sqm_prices.append(p / s)
+
+        avg_sqm = int(sum(sqm_prices)/len(sqm_prices)) if sqm_prices else 0
+
+        # Absorption Rate (Days on Market)
+        doms = []
+        for l in (r_items + s_items):
+            first = l.get("first_seen_at") or l.get("scraped_at")
+            if first:
+                try:
+                    dt = datetime.fromisoformat(first.replace('Z', '+00:00'))
+                    days = (now - dt).days
+                    doms.append(max(1, days))
+                except: pass
+
+        avg_dom = round(sum(doms)/len(doms), 1) if doms else 0
+
+        # Rental Yield
+        # Rule of thumb for PNG: Annual Rent / Sale Price
+        # If no sale data, use benchmark sale prices derived from rent benchmarks (Cap Rate ~8-12%)
+        avg_sale = int(sum(s_prices)/len(s_prices)) if s_prices else (BENCHMARKS.get(sub, 2500) * 12 * 10)
+        yield_pct = round(((avg_rent * 12) / avg_sale) * 100, 2) if avg_sale > 0 else 0
+
+        c = SUBURB_COORDS.get(sub, {"lat":-9.44, "lng":147.18})
+        result.append({
+            "suburb": sub,
+            "avg_price": avg_rent,
+            "avg_price_sqm": avg_sqm,
+            "rental_yield": yield_pct,
+            "absorption_rate": avg_dom, # average days on market
+            "listings": n_rent + len(s_items),
+            "rent_count": n_rent,
+            "sale_count": len(s_items),
+            "lat": c["lat"], "lng": c["lng"]
+        })
+
+    return sorted(result, key=lambda x: -x["avg_price"])
 
 def _trends(listings):
     top=["Waigani","Boroko","Gerehu"]; now=datetime.now(timezone.utc); rng=random.Random(99); rows=[]

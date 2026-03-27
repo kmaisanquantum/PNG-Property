@@ -200,13 +200,19 @@ function LineChart({trends}) {
 }
 
 // ── SVG HEATMAP BUBBLES ───────────────────────────────────────────────────────
-function HeatmapViz({suburbs, selected, onSelect}) {
+function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price"}) {
   if (!suburbs?.length) return null;
   const LAT0=-9.505,LAT1=-9.37,LNG0=147.13,LNG1=147.21,W=520,H=320;
   const toX = lng => ((lng-LNG0)/(LNG1-LNG0))*W;
   const toY = lat => ((lat-LAT0)/(LAT1-LAT0))*H;
   const maxL = Math.max(...suburbs.map(s=>s.listings||1));
   const rOf  = l => 22+((l/maxL)**0.5)*28;
+
+  const minV = Math.min(...suburbs.map(s => s[metric] || 0));
+  const maxV = Math.max(...suburbs.map(s => s[metric] || 1));
+
+  const getCol = (val) => priceColor(val, minV, maxV);
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto"}}>
       <defs><pattern id="g" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r=".6" fill={C.bg3}/></pattern></defs>
@@ -214,14 +220,15 @@ function HeatmapViz({suburbs, selected, onSelect}) {
       {suburbs.map(s=>{
         if(!s.lat||!s.lng) return null;
         const x=toX(s.lng), y=toY(s.lat), r=rOf(s.listings||20);
-        const col=priceColor(s.avg_price);
-        const sel=selected===s.suburb;
+        const val = s[metric] || 0;
+        const col = getCol(val);
+        const sel = selected===s.suburb;
         return <g key={s.suburb} onClick={()=>onSelect(sel?null:s.suburb)} style={{cursor:"pointer"}}>
           <circle cx={x} cy={y} r={r*1.5} fill={`${col}10`}/>
           {sel&&<circle cx={x} cy={y} r={r+8} fill="none" stroke={col} strokeWidth={1.5} strokeDasharray="4 3"/>}
           <circle cx={x} cy={y} r={r} fill={`${col}${selected&&!sel?"30":"CC"}`} stroke={col} strokeWidth={sel?2:1}/>
           <text x={x} y={y-3} textAnchor="middle" fill={selected&&!sel?C.text3:C.text0} fontSize={9} fontWeight={700} fontFamily="'Barlow Condensed'">{s.suburb}</text>
-          <text x={x} y={y+9} textAnchor="middle" fill={col} fontSize={8} fontFamily="'IBM Plex Mono'">{fmt(s.avg_price)}</text>
+          <text x={x} y={y+9} textAnchor="middle" fill={col} fontSize={8} fontFamily="'IBM Plex Mono'">{metric.includes("yield") ? `${val}%` : metric.includes("rate") ? `${val}d` : fmt(val)}</text>
         </g>;
       })}
     </svg>
@@ -623,6 +630,8 @@ function HeatmapView() {
   const [data, setData] = useState(null);
   const [selected, setSelected] = useState(null);
   const [sort, setSort] = useState("avg_price");
+  const [metric, setMetric] = useState("avg_price");
+
   useEffect(()=>{apiFetch("/analytics/heatmap").then(d=>setData(d||MOCK_HEATMAP));},[]);
   const suburbs=(data?.suburbs||MOCK_HEATMAP.suburbs);
   const sorted=[...suburbs].sort((a,b)=>b[sort]-a[sort]);
@@ -631,12 +640,19 @@ function HeatmapView() {
   return <div style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,height:"100%"}}>
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card style={{padding:20}}>
-        <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:16}}>SUBURB PRICE MAP · PGK/MONTH AVG · Click to select</div>
-        <HeatmapViz suburbs={suburbs} selected={selected} onSelect={setSelected}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>MARKET HEATMAP · Click to select</span>
+          <div style={{display:"flex",gap:6}}>
+            <Pill active={metric==="avg_price"} onClick={()=>setMetric("avg_price")}>Rent</Pill>
+            <Pill active={metric==="avg_price_sqm"} onClick={()=>setMetric("avg_price_sqm")}>PGK/Sqm</Pill>
+            <Pill active={metric==="rental_yield"} onClick={()=>setMetric("rental_yield")}>Yield %</Pill>
+          </div>
+        </div>
+        <HeatmapViz suburbs={suburbs} selected={selected} onSelect={setSelected} metric={metric}/>
         <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:9,color:C.text2}}>Budget</span>
+          <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:6,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(120,140,180),rgb(200,70,45))`}}/>
-          <span style={{fontSize:9,color:C.text2}}>Premium</span>
+          <span style={{fontSize:9,color:C.text2}}>High</span>
         </div>
       </Card>
       {/* Grid tiles */}
@@ -688,17 +704,56 @@ function HeatmapView() {
 
 function AnalyticsView() {
   const [sd,setSd]=useState(null); const [src,setSrc]=useState(null); const [trends,setTrends]=useState(null);
+  const [heatmap,setHeatmap]=useState(null);
+  const [calc, setCalc] = useState({price: 500000, rent: 4500});
+
   useEffect(()=>{
     apiFetch("/analytics/supply-demand").then(d=>setSd(d||MOCK_SD));
     apiFetch("/analytics/sources").then(d=>setSrc(d||MOCK_SOURCES));
     apiFetch("/analytics/trends").then(d=>setTrends(d||MOCK_TRENDS));
+    apiFetch("/analytics/heatmap").then(d=>setHeatmap(d||MOCK_HEATMAP));
   },[]);
+
   const sdData=(sd?.data||MOCK_SD.data);
   const srcData=(src?.sources||MOCK_SOURCES.sources);
   const trData=(trends?.trends||MOCK_TRENDS.trends);
+  const hmData=(heatmap?.suburbs||[]);
   const maxSup=Math.max(...sdData.map(d=>d.supply||0));
 
+  const calculatedYield = ((calc.rent * 12) / calc.price) * 100;
+
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+    {/* Investor Insights Row */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+      <Card style={{padding:20}}>
+        <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14, letterSpacing:'0.1em'}}>ESTIMATED RENTAL YIELD</div>
+        <BarChart data={[...hmData].sort((a,b)=>b.rental_yield-a.rental_yield)} labelKey="suburb" valueKey="rental_yield" color={C.amber}/>
+        <div style={{fontSize:9,color:C.text2,marginTop:10}}>* Yield = (Avg Annual Rent / Avg Sale Price)</div>
+      </Card>
+      <Card style={{padding:20}}>
+        <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14, letterSpacing:'0.1em'}}>ABSORPTION RATE (DAYS)</div>
+        <BarChart data={[...hmData].sort((a,b)=>b.absorption_rate-a.absorption_rate)} labelKey="suburb" valueKey="absorption_rate" color={C.violet}/>
+        <div style={{fontSize:9,color:C.text2,marginTop:10}}>* Avg Days on Market. Lower is faster.</div>
+      </Card>
+      <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
+        <div style={{fontSize:11,color:C.teal,fontFamily:"'IBM Plex Mono'",marginBottom:14, letterSpacing:'0.1em'}}>YIELD CALCULATOR</div>
+        <div style={{display:'flex', flexDirection:'column', gap:10}}>
+          <div>
+            <div style={{fontSize:9, color:C.text2, marginBottom:4}}>ASSET PRICE (PGK)</div>
+            <input type="number" value={calc.price} onChange={e=>setCalc({...calc, price: Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:4, padding:6, color:C.text0, fontSize:12}} />
+          </div>
+          <div>
+            <div style={{fontSize:9, color:C.text2, marginBottom:4}}>MONTHLY RENT (PGK)</div>
+            <input type="number" value={calc.rent} onChange={e=>setCalc({...calc, rent: Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:4, padding:6, color:C.text0, fontSize:12}} />
+          </div>
+          <div style={{marginTop:8, paddingTop:8, borderTop:`1px solid ${C.bg3}`, textAlign:'center'}}>
+            <div style={{fontSize:10, color:C.text1}}>NET GROSS YIELD</div>
+            <div style={{fontSize:24, fontWeight:800, color:C.amber}}>{calculatedYield.toFixed(2)}%</div>
+          </div>
+        </div>
+      </Card>
+    </div>
+
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
       <Card style={{padding:20}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>RENT PRICE TRENDS</div>
@@ -712,6 +767,7 @@ function AnalyticsView() {
         <BarChart data={srcData} labelKey="name" valueKey="count" color={C.teal}/>
       </Card>
     </div>
+
     <Card style={{padding:20}}>
       <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>SUPPLY / DEMAND BY SUBURB</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>

@@ -130,11 +130,12 @@ class HausplesScraper(PNGScraper):
 
     IS_VERIFIED = True
 
-    def __init__(self, base_url: str = DEFAULT_BASE_URL, source_site: str = DEFAULT_SOURCE, max_pages: int = 5, headless: bool = True):
+    def __init__(self, base_url: str = DEFAULT_BASE_URL, source_site: str = DEFAULT_SOURCE, max_pages: int = 5, headless: bool = True, mode: str = "rent"):
         super().__init__(headless)
         self.base_url = base_url.rstrip("/")
         self.SOURCE_SITE = source_site
         self.max_pages = max_pages
+        self.mode = mode # "rent" or "sale"
 
     async def _parse_card(self, card) -> Optional[Listing]:
         """Extract one Listing from a Hausples property card element."""
@@ -167,7 +168,7 @@ class HausplesScraper(PNGScraper):
         page = self._page
         results: list[Listing] = []
         seen_ids: set[str] = set()
-        rent_url = f"{self.base_url}/rent/"
+        base_search_url = f"{self.base_url}/{self.mode}/"
 
         # Block heavy assets we don't need
         await page.route(
@@ -176,8 +177,8 @@ class HausplesScraper(PNGScraper):
         )
 
         for page_num in range(1, self.max_pages + 1):
-            url = rent_url if page_num == 1 else f"{rent_url}?page={page_num}"
-            log.info(f"[{self.SOURCE_SITE}] Page {page_num}/{self.max_pages} → {url}")
+            url = base_search_url if page_num == 1 else f"{base_search_url}?page={page_num}"
+            log.info(f"[{self.SOURCE_SITE}] {self.mode.upper()} Page {page_num}/{self.max_pages} → {url}")
 
             if not await self._goto(url):
                 break
