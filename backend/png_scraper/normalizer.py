@@ -105,6 +105,8 @@ class NormalizedListing:
     suburb: Optional[str]          # canonical suburb name
     property_type: Optional[str]
     bedrooms: Optional[int]
+    sqm: Optional[float]
+    is_for_sale: bool
     contact_info: dict             # {phones: [], emails: []}
     is_middleman: bool
     middleman_flags: list[str]
@@ -255,6 +257,25 @@ def parse_bedrooms(text: str) -> Optional[int]:
                 return n
     return None
 
+def parse_sqm(text: str) -> Optional[float]:
+    pattern = r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|m2|m²|square\s*meters?)'
+    m = re.search(pattern, text, re.IGNORECASE)
+    if m:
+        try:
+            val = float(m.group(1))
+            return val if 5 <= val <= 50000 else None
+        except ValueError:
+            return None
+    return None
+
+def parse_is_sale(text: str) -> bool:
+    t = text.lower()
+    if any(kw in t for kw in ["for sale", "selling", "/sale/", "price on application", "poa"]):
+        if any(kw in t for kw in ["for rent", "to let", "/rent/"]):
+            # ambiguous, but "sale" is often more specific if mentioned
+            return "for sale" in t or "/sale/" in t
+        return True
+    return False
 
 # ---------------------------------------------------------------------------
 # CONTACT INFO PARSING
@@ -330,6 +351,8 @@ def normalize(raw_text: str) -> dict:
           "suburb": "Boroko",
           "property_type": "House",
           "bedrooms": 3,
+          "sqm": null,
+          "is_for_sale": false,
           "contact_info": {"phones": ["+675 7123 4567", "+675 7234 5678"], "emails": []},
           "is_middleman": false,
           "middleman_flags": [],
@@ -340,6 +363,8 @@ def normalize(raw_text: str) -> dict:
     location_raw, suburb = parse_location(raw_text)
     property_type = parse_property_type(raw_text)
     bedrooms = parse_bedrooms(raw_text)
+    sqm = parse_sqm(raw_text)
+    is_sale = parse_is_sale(raw_text)
     contact_info = parse_contact_info(raw_text)
     is_middleman, middleman_flags = detect_middleman(raw_text)
 
@@ -351,6 +376,8 @@ def normalize(raw_text: str) -> dict:
         suburb=suburb,
         property_type=property_type,
         bedrooms=bedrooms,
+        sqm=sqm,
+        is_for_sale=is_sale,
         contact_info=contact_info,
         is_middleman=is_middleman,
         middleman_flags=middleman_flags,
