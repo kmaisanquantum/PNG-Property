@@ -107,19 +107,26 @@ body { background: ${C.bg0}; color: ${C.text0}; font-family: 'Barlow', sans-seri
 @media (max-width: 768px) {
   .app-shell { flex-direction: column !important; }
   .sidebar-container {
-    width: 100% !important; height: 60px !important;
-    flex-direction: row !important; padding: 0 16px !important;
+    width: 100% !important; height: 64px !important;
+    flex-direction: row !important; padding: 0 !important;
     border-right: none !important; border-top: 1px solid ${C.border} !important;
-    order: 2;
+    order: 2; overflow-x: auto; -webkit-overflow-scrolling: touch;
   }
   .sidebar-logo { display: none !important; }
-  .nav-items-wrapper { flex-direction: row !important; flex: 1; justify-content: space-around; }
+  .nav-items-wrapper {
+    flex-direction: row !important; flex: 1;
+    justify-content: flex-start !important;
+    padding: 0 12px !important; gap: 8px !important;
+  }
   .sidebar-spacer { display: none !important; }
-  .logout-btn { border: none !important; width: auto !important; height: auto !important; margin-bottom: 0 !important; }
+  .logout-btn { display: none !important; }
   .live-indicator { display: none !important; }
-  .main-content { height: calc(100vh - 60px) !important; order: 1; }
+  .main-content { height: calc(100vh - 64px) !important; order: 1; }
   .topbar { padding: 0 12px !important; }
-  .location-tag, .updated-tag, .user-info { display: none !important; }
+  .location-tag, .updated-tag { display: none !important; }
+  .user-info { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px !important; margin-right: 0 !important; }
+  .user-info div { display: none !important; }
+  .user-info button { font-size: 11px !important; padding: 4px 8px !important; border: 1px solid ${C.red}44 !important; border-radius: 4px !important; }
   .scrape-text { display: none !important; }
   .scrape-btn { padding: 8px !important; }
   .dashboard-grid-row { grid-template-columns: 1fr !important; }
@@ -509,7 +516,7 @@ function Topbar({view, overview, onScrape, onLogout, loading, user}) {
   return (
     <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
-        <span style={{fontFamily:"'Barlow Condensed'",fontSize:18,fontWeight:700,color:C.text0}}>{viewLabels[view]}</span>
+        <span className="topbar-title" style={{fontFamily:"'Barlow Condensed'",fontSize:18,fontWeight:700,color:C.text0}}>{viewLabels[view]}</span>
         <span className="location-tag" style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
@@ -771,7 +778,7 @@ function HeatmapView() {
      return {...s, ...rel};
   });
 
-  return <div style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,height:"100%"}}>
+  return <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,height:"100%"}}>
     {showReview && (
        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center'}}>
           <Card style={{width:400, padding:24}}>
@@ -898,7 +905,7 @@ function AnalyticsView() {
 
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
     {/* Investor Insights Row */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
       <Card style={{padding:20}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14, letterSpacing:'0.1em'}}>ESTIMATED RENTAL YIELD</div>
         <BarChart data={[...hmData].sort((a,b)=>b.rental_yield-a.rental_yield)} labelKey="suburb" valueKey="rental_yield" color={C.amber}/>
@@ -928,7 +935,7 @@ function AnalyticsView() {
       </Card>
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
       <Card style={{padding:20}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>RENT PRICE TRENDS</div>
         <div style={{display:"flex",gap:10,marginBottom:12}}>
@@ -1249,7 +1256,7 @@ function ValuationView() {
         </div>
       )}
 
-      <div style={{display:'grid', gridTemplateColumns:'340px 1fr', gap:20}}>
+      <div className="dashboard-grid-row" style={{display:'grid', gridTemplateColumns:'340px 1fr', gap:20}}>
          <Card style={{padding:24, height:'fit-content'}}>
             <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>VALUE MY HOME</div>
             <div style={{display:'flex', flexDirection:'column', gap:16}}>
@@ -1408,7 +1415,7 @@ function VaultView() {
           </div>
        </Card>
 
-       <div style={{display:'grid', gridTemplateColumns:'1fr 340px', gap:14}}>
+       <div className="dashboard-grid-row" style={{display:'grid', gridTemplateColumns:'1fr 340px', gap:14}}>
           <Card style={{padding:20}}>
              <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:16}}>DOCUMENT CHECKLIST</div>
              <div style={{display:'flex', flexDirection:'column', gap:12}}>
