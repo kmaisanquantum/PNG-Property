@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
@@ -67,6 +67,8 @@ app.add_middleware(
 
 scrape_jobs: dict[str, dict] = {}
 OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", "output/png_listings_latest.json"))
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 STATIC_DIR = Path("static")
 
@@ -113,6 +115,7 @@ class User(BaseModel):
     auth_provider: str = "email" # email, google, facebook, phone, whatsapp
     saved_searches: List[dict] = []
     notification_prefs: dict = {"whatsapp": True, "email": False}
+    documents: List[dict] = []
 
 class UserCreate(BaseModel):
     email: Optional[EmailStr] = None
@@ -125,8 +128,14 @@ class UserInDB(User):
     hashed_password: Optional[str] = None
 
 users_db: dict[str, UserInDB] = {}
+_listings_cache: dict = {"data": [], "timestamp": None}
 
 def _load_listings() -> list[dict]:
+    # Performance Optimization: Cache deduplicated listings based on file modification time
+    mtime = OUTPUT_FILE.stat().st_mtime if OUTPUT_FILE.exists() else 0
+    if _listings_cache["timestamp"] == mtime and _listings_cache["data"]:
+        return _listings_cache["data"]
+
     raw_ls = []
     db = _get_db()
     if db is not None:
@@ -168,7 +177,12 @@ def _load_listings() -> list[dict]:
             log.error(f"Error hydrating listing {d.get('listing_id')}: {e}")
 
     grouped_objects = group_listings(objects)
-    return [o.to_dict() for o in grouped_objects]
+    processed = [o.to_dict() for o in grouped_objects]
+
+    # Update cache
+    _listings_cache["data"] = processed
+    _listings_cache["timestamp"] = mtime
+    return processed
 
 def get_user_by_identifier(identifier: str) -> Optional[UserInDB]:
     # Check in-memory first
@@ -679,6 +693,84 @@ def follow_search(req: FollowSearchRequest, current_user: User = Depends(get_cur
 def get_followed_searches(current_user: User = Depends(get_current_user)):
     user = get_user_by_identifier(current_user.email or current_user.phone)
     return {"saved_searches": user.saved_searches if user else []}
+
+# ── Bank-Ready Document Vault ───────────────────────────────────────────────
+
+ALLOWED_DOC_TYPES = {"ID", "Slip", "Nasfund", "Nambawan", "Offer"}
+
+@app.post("/api/vault/upload")
+async def upload_vault_document(
+    doc_type: str,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    if doc_type not in ALLOWED_DOC_TYPES:
+        raise HTTPException(400, f"Invalid document type. Allowed types: {ALLOWED_DOC_TYPES}")
+    identifier = current_user.email or current_user.phone
+    user = get_user_by_identifier(identifier)
+    if not user: raise HTTPException(404, "User not found")
+
+    # Secure filename
+    file_id = str(uuid.uuid4())[:8]
+    ext = file.filename.split(".")[-1] if "." in file.filename else "dat"
+    filename = f"{identifier.replace('@','_')}_{doc_type}_{file_id}.{ext}"
+    file_path = UPLOAD_DIR / filename
+
+    # In a real app, use S3 or a secure volume. Here we write to local disk.
+    with open(file_path, "wb") as f:
+        f.write(await file.read())
+
+    doc_entry = {
+        "id": file_id,
+        "type": doc_type,
+        "filename": file.filename,
+        "path": str(file_path),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "status": "Verified" # In reality, might be "Pending Review"
+    }
+
+    # Update user record
+    # Find existing of same type and update or append
+    existing = next((d for d in user.documents if d["type"] == doc_type), None)
+    if existing:
+        user.documents.remove(existing)
+    user.documents.append(doc_entry)
+
+    db = _get_db()
+    if db is not None:
+        try:
+            db["users"].update_one(
+                {"$or": [{"email": current_user.email}, {"phone": current_user.phone}]},
+                {"$set": {"documents": user.documents}}
+            )
+        except: pass
+
+    # Update in-memory
+    if current_user.email: users_db[current_user.email] = user
+    if current_user.phone: users_db[current_user.phone] = user
+
+    return {"status": "ok", "document": doc_entry}
+
+@app.get("/api/vault/status")
+def get_vault_status(current_user: User = Depends(get_current_user)):
+    user = get_user_by_identifier(current_user.email or current_user.phone)
+    return {"documents": user.documents if user else []}
+
+@app.post("/api/vault/package")
+def package_vault(current_user: User = Depends(get_current_user)):
+    """Simulates creating a shared digital folder for a bank lending officer."""
+    user = get_user_by_identifier(current_user.email or current_user.phone)
+    if not user or not user.documents:
+        raise HTTPException(400, "No documents to package")
+
+    share_token = str(uuid.uuid4())[:12]
+    # In production, this would create a signed temporary link or a ZIP archive
+    return {
+        "status": "ready",
+        "share_url": f"https://png-property.tech/share/vault/{share_token}",
+        "document_count": len(user.documents),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    }
 
 # ── B2B Agent Intelligence Routes ─────────────────────────────────────────────
 

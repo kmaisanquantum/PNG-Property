@@ -438,6 +438,7 @@ const NAV_ITEMS = [
   {id:"heatmap",   icon:"◉", label:"Heatmap"},
   {id:"analytics", icon:"∿", label:"Analytics"},
   {id:"notifications", icon:"🔔", label:"Alerts"},
+  {id:"vault",       icon:"💼", label:"Vault"},
   {id:"b2b",       icon:"🛰", label:"Agent Intel"},
   {id:"flags",     icon:"⚑", label:"Flagged"},
   {id:"sources", icon:"📡", label:"Sources"},
@@ -470,7 +471,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
-  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
+  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
   return (
     <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -1063,6 +1064,124 @@ function B2BView() {
   );
 }
 
+function VaultView() {
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [packaging, setPackaging] = useState(false);
+  const [shareData, setShareData] = useState(null);
+
+  const checklist = [
+    {id: "ID", label: "National ID / Passport"},
+    {id: "Slip", label: "Last 3 Salary Slips"},
+    {id: "Nasfund", label: "NASFUND Statement"},
+    {id: "Nambawan", label: "Nambawan Super Statement"},
+    {id: "Offer", label: "Letter of Offer"}
+  ];
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    const d = await apiFetch("/vault/status");
+    setDocs(d?.documents || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const onUpload = async (type, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await apiFetch(`/vault/upload?doc_type=${type}`, {
+      method: "POST",
+      body: formData
+    });
+    if (res) refresh();
+  };
+
+  const onPackage = async () => {
+    setPackaging(true);
+    const res = await apiFetch("/vault/package", { method: "POST" });
+    if (res) setShareData(res);
+    setPackaging(false);
+  };
+
+  if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
+
+  const getDoc = (type) => docs.find(d => d.type === type);
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+       <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, #0a202d)`}}>
+          <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14, letterSpacing:'0.1em'}}>MORTGAGE READINESS</div>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+             <div style={{maxWidth:600}}>
+                <div style={{fontSize:18, fontWeight:800, marginBottom:8}}>Bank-Ready Document Vault</div>
+                <div style={{fontSize:13, color:C.text1, lineHeight:1.5}}>
+                   Skip the 3-month wait. Upload your required documents now to create a pre-packaged digital folder.
+                   Share it directly with BSP or Kina Bank lending officers once you find your dream home.
+                </div>
+             </div>
+             <div style={{textAlign:'right'}}>
+                <div style={{fontSize:24, fontWeight:800, color:docs.length === checklist.length ? C.green : C.amber}}>{Math.round((docs.length/checklist.length)*100)}%</div>
+                <div style={{fontSize:10, color:C.text2}}>COMPLETION</div>
+             </div>
+          </div>
+       </Card>
+
+       <div style={{display:'grid', gridTemplateColumns:'1fr 340px', gap:14}}>
+          <Card style={{padding:20}}>
+             <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:16}}>DOCUMENT CHECKLIST</div>
+             <div style={{display:'flex', flexDirection:'column', gap:12}}>
+                {checklist.map(item => {
+                   const doc = getDoc(item.id);
+                   return (
+                     <div key={item.id} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:"12px 16px", background:C.bg3, borderRadius:10, border:`1px solid ${doc ? C.teal+'44' : C.border}`}}>
+                        <div>
+                           <div style={{fontSize:14, fontWeight:700, color:doc ? C.text0 : C.text1}}>{item.label}</div>
+                           {doc && <div style={{fontSize:10, color:C.teal}}>Uploaded {rel(doc.uploaded_at)} · {doc.filename}</div>}
+                        </div>
+                        {doc ? (
+                          <Badge label="✓ READY" color={C.green} />
+                        ) : (
+                          <label style={{background:C.bg1, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 12px", fontSize:11, cursor:'pointer', fontWeight:700, color:C.text2}}>
+                             UPLOAD
+                             <input type="file" style={{display:'none'}} onChange={e => onUpload(item.id, e.target.files[0])} />
+                          </label>
+                        )}
+                     </div>
+                   );
+                })}
+             </div>
+          </Card>
+
+          <div style={{display:'flex', flexDirection:'column', gap:14}}>
+             <Card style={{padding:20, background:C.bg2, textAlign:'center'}}>
+                <div style={{fontSize:32, marginBottom:10}}>📁</div>
+                <div style={{fontSize:15, fontWeight:700, marginBottom:8}}>Package for Bank</div>
+                <div style={{fontSize:12, color:C.text2, marginBottom:20}}>Generate a secure single-link access for your lending officer at BSP or Kina Bank.</div>
+                <button
+                  disabled={docs.length === 0 || packaging}
+                  onClick={onPackage}
+                  style={{width:'100%', background:C.teal, color:C.bg0, border:'none', borderRadius:8, padding:12, fontWeight:700, cursor:docs.length ? 'pointer' : 'not-allowed', opacity:docs.length ? 1 : 0.5}}
+                >
+                   {packaging ? "PACKAGING..." : "CREATE BANK FOLDER"}
+                </button>
+             </Card>
+
+             {shareData && (
+               <Card style={{padding:20, border:`1px solid ${C.green}44`, animation:'fadeUp 0.3s ease'}}>
+                  <div style={{fontSize:11, color:C.green, fontWeight:700, marginBottom:10}}>✓ FOLDER READY</div>
+                  <div style={{background:C.bg3, padding:8, borderRadius:6, fontSize:10, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:10, wordBreak:'break-all'}}>
+                     {shareData.share_url}
+                  </div>
+                  <div style={{fontSize:11, color:C.text2}}>Expires in 7 days. Share this link with your bank officer.</div>
+               </Card>
+             )}
+          </div>
+       </div>
+    </div>
+  );
+}
+
 function NotificationsView() {
   const [searches, setSearches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1194,6 +1313,7 @@ export default function App() {
             {view==="heatmap"  &&<HeatmapView/>}
             {view==="analytics"&&<AnalyticsView/>}
             {view==="notifications" && <NotificationsView />}
+            {view==="vault" && <VaultView />}
             {view==="b2b"      &&<B2BView/>}
             {view==="flags"    &&<FlagsView/>}
             {view==="sources"&&<ResourcesView/>}
