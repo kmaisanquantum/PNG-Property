@@ -136,6 +136,8 @@ class Listing:
     is_for_sale:     bool = False
     health_score:    int = 0
     is_middleman:    bool = False
+    title_status:    str = "Unknown / TBC"
+    legal_flags:     list[str] = field(default_factory=list)
     group_id:        Optional[str] = None
     raw_text:        str            = ""
 
@@ -283,7 +285,10 @@ def make_listing(
     raw_text: str = "",
 ) -> Listing:
     # Import trust helpers from normalizer to avoid logic duplication
-    from png_scraper.normalizer import calculate_health_score, check_verification, parse_contact_info, detect_middleman
+    from png_scraper.normalizer import (
+        calculate_health_score, check_verification, parse_contact_info,
+        detect_middleman, classify_title_status, detect_legal_flags
+    )
 
     price_k, _, conf = normalise_price(price_raw)
     combined = f"{title} {raw_text} {location}"
@@ -296,6 +301,8 @@ def make_listing(
 
     contacts = parse_contact_info(combined)
     is_mid, _ = detect_middleman(combined)
+    t_status = classify_title_status(combined)
+    l_flags  = detect_legal_flags(combined)
 
     # Enhanced Verification: Cross-verify if not already verified by source
     if not is_verified:
@@ -320,6 +327,8 @@ def make_listing(
         sqm             = sqm_val,
         is_for_sale     = is_sale,
         is_middleman    = is_mid,
+        title_status    = t_status,
+        legal_flags     = l_flags,
         health_score    = health,
         raw_text        = raw_text[:400],
     )

@@ -69,6 +69,18 @@ MIDDLEMAN_KEYWORDS = [
     "broker", "property manager", "pm me", "message me for info",
 ]
 
+# Legal & Title Keywords
+TITLE_PATTERNS = {
+    "State Lease": [r"state lease", r"99 year lease", r"c\.of\.t", r"certificate of title", r"formal title"],
+    "Customary (ILG)": [r"customary land", r"ilg", r"incorporated land group", r"clan land"],
+}
+
+LEGAL_WARNINGS = {
+    "Dispute": [r"under dispute", r"land dispute", r"court case", r"legal battle"],
+    "Caveat": [r"caveat", r"restriction", r"frozen"],
+    "Unclear": [r"no title", r"paperwork in progress", r"awaiting ilg"],
+}
+
 # PGK conversion factors → all to monthly
 PRICE_PERIOD_MULTIPLIERS = {
     "day":    30,
@@ -328,6 +340,22 @@ def detect_middleman(text: str) -> tuple[bool, list[str]]:
     flags = [kw for kw in MIDDLEMAN_KEYWORDS if kw in text_lower]
     return len(flags) > 0, flags
 
+def classify_title_status(text: str) -> str:
+    """Identify if the land is State Lease, Customary, or Unknown."""
+    t = text.lower()
+    for status, patterns in TITLE_PATTERNS.items():
+        if any(re.search(p, t) for p in patterns):
+            return status
+    return "Unknown / TBC"
+
+def detect_legal_flags(text: str) -> list[str]:
+    """Detect red flags related to land disputes or missing paperwork."""
+    t = text.lower()
+    flags = []
+    for label, patterns in LEGAL_WARNINGS.items():
+        if any(re.search(p, t) for p in patterns):
+            flags.append(label)
+    return flags
 
 # ---------------------------------------------------------------------------
 # MAIN NORMALIZER

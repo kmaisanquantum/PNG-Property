@@ -324,17 +324,25 @@ function MvBadge({mv}) {
 }
 
 // ── LISTING ROW ───────────────────────────────────────────────────────────────
-function ListingRow({l}) {
+function ListingRow({l, onSearchTitle}) {
   const isFlag = l.market_value?.label==="Overpriced" && l.market_value?.pct_vs_avg>40;
+  const isLegalRisk = l.legal_flags?.length > 0;
   const hasDupes = !!l.group_id;
+
+  const tColor = l.title_status === 'State Lease' ? C.green : l.title_status?.includes('Customary') ? C.amber : C.text2;
+
   return (
-    <tr style={{borderBottom:`1px solid ${C.bg3}`,background:isFlag?"rgba(239,68,68,.04)":"transparent",transition:"background .15s"}}
-      onMouseEnter={e=>e.currentTarget.style.background=isFlag?"rgba(239,68,68,.08)":C.bg2}
-      onMouseLeave={e=>e.currentTarget.style.background=isFlag?"rgba(239,68,68,.04)":"transparent"}>
+    <tr style={{borderBottom:`1px solid ${C.bg3}`,background:isFlag||isLegalRisk?"rgba(239,68,68,.04)":"transparent",transition:"background .15s"}}
+      onMouseEnter={e=>e.currentTarget.style.background=isFlag||isLegalRisk?"rgba(239,68,68,.08)":C.bg2}
+      onMouseLeave={e=>e.currentTarget.style.background=isFlag||isLegalRisk?"rgba(239,68,68,.04)":"transparent"}>
       <td style={{padding:"9px 12px",color:C.text1,fontSize:12}}>{l.suburb||"—"}</td>
       <td style={{padding:"9px 12px",maxWidth:180}}>
         <div style={{color:C.text0,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.title}</div>
-        {hasDupes && <div style={{fontSize:9, color:C.amber, marginTop:2, display:'flex', alignItems:'center', gap:3}}>👯 Multiple listings detected</div>}
+        <div style={{display:'flex', gap:4, marginTop:4, flexWrap:'wrap'}}>
+           {hasDupes && <div style={{fontSize:8, color:C.amber, display:'flex', alignItems:'center', gap:2}}>👯 DUPE</div>}
+           <Badge label={l.title_status} color={tColor} small />
+           {isLegalRisk && <Badge label="⚠️ LEGAL RISK" color={C.red} small />}
+        </div>
       </td>
       <td style={{padding:"9px 12px"}}><span style={{fontFamily:"'IBM Plex Mono'",fontSize:12,color:C.teal,fontWeight:600}}>{fmt(l.price_monthly_k)}</span></td>
       <td style={{padding:"9px 12px"}}><MvBadge mv={l.market_value}/></td>
@@ -342,13 +350,21 @@ function ListingRow({l}) {
         <HealthScore score={l.health_score || 0} />
       </td>
       <td style={{padding:"9px 12px"}}>
-        <div style={{display:'flex', flexDirection:'column', gap:3}}>
+        <div style={{display:'flex', flexDirection:'column', gap:3, minWidth:80}}>
            <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600, width:'fit-content'}}>{l.source_site}</span>
            {l.is_verified ? <Badge label="✓ Verified" color={C.green} small/> : <Badge label="Unverified" color={C.text2} small/>}
         </div>
       </td>
       <td style={{padding:"9px 12px",color:C.text2,fontSize:11}}>{rel(l.scraped_at)}</td>
-      <td style={{padding:"9px 12px"}}>{isFlag&&<span style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}</td>
+      <td style={{padding:"9px 12px"}}>
+         <div style={{display:'flex', gap:6}}>
+            {isFlag&&<span title="Market Flag" style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}
+            {isLegalRisk&&<span title="Legal Dispute/Risk" style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>⚖️</span>}
+         </div>
+      </td>
+      <td style={{padding:"9px 12px"}}>
+         <button onClick={() => onSearchTitle(l.listing_id)} style={{background:'transparent', border:`1px solid ${C.teal}44`, color:C.teal, fontSize:9, fontWeight:700, borderRadius:4, padding:"4px 8px", cursor:'pointer', whiteSpace:'nowrap'}}>SEARCH TITLE</button>
+      </td>
     </tr>
   );
 }
@@ -618,9 +634,59 @@ function ListingsView({suburbFilter}) {
 
   useEffect(()=>{load();},[load]);
 
+  const [showLegalModal, setShowLegalModal] = useState(null);
+
   const TH=({children,s})=><th onClick={()=>setSort(s||"scraped_at")} style={{padding:"8px 12px",textAlign:"left",fontSize:10,color:sort===s?C.teal:C.text2,fontFamily:"'IBM Plex Mono'",letterSpacing:"0.08em",cursor:"pointer",userSelect:"none",whiteSpace:"nowrap"}}>{children}{sort===s?" ↓":""}</th>;
 
+  const runTitleSearch = async (lid) => {
+    const res = await apiFetch(`/legal/title-search?listing_id=${lid}`);
+    if (res) setShowLegalModal(res);
+  };
+
   return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+     {showLegalModal && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center'}}>
+           <Card style={{width:450, padding:24}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
+                 <span style={{fontWeight:800, color:C.teal}}>Legal Guard: Title Verification</span>
+                 <button onClick={()=>setShowLegalModal(null)} style={{background:'none', border:'none', color:C.text2, cursor:'pointer'}}>✕</button>
+              </div>
+              <div style={{display:'flex', flexDirection:'column', gap:16}}>
+                 <div style={{background:C.bg3, padding:14, borderRadius:10}}>
+                    <div style={{fontSize:10, color:C.text2, marginBottom:4}}>OFFICIAL TITLE STATUS</div>
+                    <div style={{fontSize:18, fontWeight:800, color:showLegalModal.registry_verified ? C.green : C.amber}}>
+                       {showLegalModal.title_status} {showLegalModal.registry_verified ? '✓' : ''}
+                    </div>
+                    <div style={{fontSize:11, color:C.text2, marginTop:4}}>
+                       {showLegalModal.registry_verified ? 'Registry record found and matches listing.' : 'No active registry link found for this listing ID.'}
+                    </div>
+                 </div>
+
+                 <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+                    <div style={{background:C.bg3, padding:10, borderRadius:8}}>
+                       <div style={{fontSize:9, color:C.text2, marginBottom:2}}>DISPUTE INDEX</div>
+                       <div style={{fontSize:13, fontWeight:700, color:showLegalModal.dispute_index === 'Low' ? C.green : C.red}}>{showLegalModal.dispute_index}</div>
+                    </div>
+                    {showLegalModal.ilg_number && (
+                      <div style={{background:C.bg3, padding:10, borderRadius:8}}>
+                         <div style={{fontSize:9, color:C.text2, marginBottom:2}}>ILG FILE NO.</div>
+                         <div style={{fontSize:13, fontWeight:700, color:C.teal}}>{showLegalModal.ilg_number}</div>
+                      </div>
+                    )}
+                 </div>
+
+                 <div style={{borderTop:`1px solid ${C.bg3}`, paddingTop:14}}>
+                    <div style={{fontSize:10, color:C.text2, marginBottom:6}}>LEGAL RECOMMENDATION</div>
+                    <div style={{fontSize:13, lineHeight:1.4, color:C.text1}}>{showLegalModal.legal_recommendation}</div>
+                 </div>
+
+                 <button style={{width:'100%', background:C.teal, color:C.bg0, border:'none', borderRadius:6, padding:10, fontWeight:700, marginTop:10}}>
+                    REQUEST FULL SOLICITOR REPORT
+                 </button>
+              </div>
+           </Card>
+        </div>
+     )}
     {/* Filters */}
     <Card style={{padding:"14px 18px"}}>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
@@ -668,9 +734,9 @@ function ListingsView({suburbFilter}) {
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-            <TH>Suburb</TH><TH>Title</TH><TH s="price_monthly_k">Price/mo</TH><TH>Market</TH><TH s="health_score">Health</TH><TH>Trust</TH><TH s="scraped_at">Posted</TH><TH></TH>
+            <TH>Suburb</TH><TH>Title</TH><TH s="price_monthly_k">Price/mo</TH><TH>Market</TH><TH s="health_score">Health</TH><TH>Trust</TH><TH s="scraped_at">Posted</TH><TH>Risk</TH><TH>Legal</TH>
           </tr></thead>
-          <tbody>{listings.map(l=><ListingRow key={l.listing_id} l={l}/>)}</tbody>
+          <tbody>{listings.map(l=><ListingRow key={l.listing_id} l={l} onSearchTitle={runTitleSearch}/>)}</tbody>
         </table>
       </div>
       {/* Pagination */}

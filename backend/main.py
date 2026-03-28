@@ -169,6 +169,8 @@ def _load_listings() -> list[dict]:
                 property_type=d.get("property_type"), bedrooms=d.get("bedrooms"), sqm=d.get("sqm"),
                 is_for_sale=d.get("is_for_sale", False), health_score=d.get("health_score", 0),
                 is_middleman=d.get("is_middleman", False), group_id=d.get("group_id"),
+                title_status=d.get("title_status", "Unknown / TBC"),
+                legal_flags=d.get("legal_flags", []),
                 scraped_at=d.get("scraped_at", ""), first_seen_at=d.get("first_seen_at", ""),
                 raw_text=d.get("raw_text", "")
             )
@@ -269,12 +271,18 @@ def _mock_listings() -> list[dict]:
 
         health = rng.randint(40, 95) if src == "Facebook Marketplace" else rng.randint(85, 100)
 
+        t_status = rng.choice(["State Lease", "Customary (ILG)", "Unknown / TBC"])
+        l_flags = []
+        if t_status == "Unknown / TBC" and rng.random() < 0.3: l_flags = ["Dispute"]
+        if t_status == "State Lease" and rng.random() < 0.05: l_flags = ["Caveat"]
+
         listings.append({"listing_id":f"lst{i:04d}","source_site":src,"title":f"{beds} Bedroom {ptype} – {suburb}",
             "price_raw":price_raw,"price_monthly_k":price,"price_confidence":"high",
             "location":f"{suburb}, NCD","suburb":suburb,"listing_url":f"https://hausples.com.pg/listing/{i+1}",
             "is_verified":is_verified,"property_type":ptype,"bedrooms":beds,
             "sqm": sqm, "is_for_sale": is_sale, "health_score": health,
             "is_middleman": rng.random() < 0.2, "group_id": None,
+            "title_status": t_status, "legal_flags": l_flags,
             "scraped_at":scraped.isoformat(),"first_seen_at": first_seen.isoformat(),
             "raw_text":f"{beds} bedroom {ptype.lower()} in {suburb} {price_raw}"})
     return listings
@@ -693,6 +701,36 @@ def follow_search(req: FollowSearchRequest, current_user: User = Depends(get_cur
 def get_followed_searches(current_user: User = Depends(get_current_user)):
     user = get_user_by_identifier(current_user.email or current_user.phone)
     return {"saved_searches": user.saved_searches if user else []}
+
+# ── Legal Guard & Title Search ──────────────────────────────────────────────
+
+@app.get("/api/legal/title-search")
+def title_search(listing_id: str, current_user: User = Depends(get_current_user)):
+    """Simulates a land registry title search for a specific property."""
+    listings = _load_listings()
+    l = next((x for x in listings if x["listing_id"] == listing_id), None)
+    if not l: raise HTTPException(404, "Listing not found")
+
+    # Simulate a detailed registry lookup
+    rng = random.Random(listing_id)
+    status = l.get("title_status", "Unknown / TBC")
+    flags = l.get("legal_flags", [])
+
+    # If the listing says state lease, 80% chance it's verified in registry
+    # If customary, 90% chance it has an associated ILG file
+    is_verified = False
+    if status == "State Lease": is_verified = rng.random() > 0.2
+    elif status == "Customary (ILG)": is_verified = rng.random() > 0.1
+
+    return {
+        "listing_id": listing_id,
+        "title_status": status,
+        "registry_verified": is_verified,
+        "last_searched": datetime.now(timezone.utc).isoformat(),
+        "dispute_index": "Low" if not flags else "High",
+        "legal_recommendation": "Safe to proceed" if is_verified and not flags else "Legal advisory recommended",
+        "ilg_number": f"ILG-{rng.randint(1000,9999)}" if status == "Customary (ILG)" else None
+    }
 
 # ── Bank-Ready Document Vault ───────────────────────────────────────────────
 
