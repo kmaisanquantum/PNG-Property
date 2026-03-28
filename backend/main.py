@@ -676,6 +676,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @app.get("/api/listings")
 def get_listings(suburb:Optional[str]=None,source:Optional[str]=None,type:Optional[str]=None,
     min_price:Optional[int]=None,max_price:Optional[int]=None,verified:Optional[bool]=None,
+    title_status:Optional[str]=None, legal_flags:Optional[str]=None,
     sort:str="scraped_at",order:str="desc",page:int=1,limit:int=25,
     current_user: User = Depends(get_current_user)):
     ls=_load_listings()
@@ -685,6 +686,9 @@ def get_listings(suburb:Optional[str]=None,source:Optional[str]=None,type:Option
     if min_price: ls=[l for l in ls if (l.get("price_monthly_k") or 0)>=min_price]
     if max_price: ls=[l for l in ls if (l.get("price_monthly_k") or 0)<=max_price]
     if verified is not None: ls=[l for l in ls if l.get("is_verified")==verified]
+    if title_status: ls=[l for l in ls if title_status.lower() in (l.get("title_status") or "").lower()]
+    if legal_flags: ls=[l for l in ls if any(legal_flags.lower() in f.lower() for f in (l.get("legal_flags") or []))]
+
     for l in ls:
         if l.get("price_monthly_k") and l.get("suburb"): l["market_value"]=_market_score(l["price_monthly_k"],l["suburb"])
     try: ls.sort(key=lambda x:x.get(sort) or "",reverse=(order=="desc"))
@@ -1053,6 +1057,13 @@ INTERNET_ZONES = {
     "Tokarara": {"fibre": False, "5g": False},
 }
 
+# Static Data: Planned Infrastructure Projects (Zoning Overlays)
+INFRASTRUCTURE_PROJECTS = [
+    {"name": "Duran Farm Housing Project", "lat": -9.3800, "lng": 147.1500, "type": "Residential Development"},
+    {"name": "Eda Town Development", "lat": -9.4100, "lng": 147.1000, "type": "Mixed Use"},
+    {"name": "Gerehu to 9-Mile Road Upgrade", "lat": -9.4000, "lng": 147.1600, "type": "Infrastructure"},
+]
+
 # In-memory crowdsourced utility reviews
 utility_reviews: List[dict] = []
 
@@ -1087,7 +1098,8 @@ def get_utility_map_data(current_user: User = Depends(get_current_user)):
     return {
         "reliability": reliability,
         "schools": SCHOOLS,
-        "internet": INTERNET_ZONES
+        "internet": INTERNET_ZONES,
+        "projects": INFRASTRUCTURE_PROJECTS
     }
 
 # ── B2B Agent Intelligence Routes ─────────────────────────────────────────────
