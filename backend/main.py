@@ -781,6 +781,13 @@ class ValuationRequest(BaseModel):
     sqm: Optional[float] = None
     is_for_sale: bool = True
 
+class UtilityReview(BaseModel):
+    suburb: str
+    street: Optional[str] = None
+    utility: str # "power" or "water"
+    rating: int # 1-5
+    comment: Optional[str] = None
+
 @app.post("/api/valuation/estimate")
 def get_valuation_estimate(req: ValuationRequest, current_user: User = Depends(get_current_user)):
     from png_scraper.valuation_engine import estimate_property_value
@@ -809,6 +816,64 @@ def get_detailed_report(req: ValuationRequest, payment_ref: str, current_user: U
     report["payment_verified"] = True
     report["payment_ref"] = payment_ref
     return report
+
+# ── Utility & Serviceability Map Layers ───────────────────────────────────────
+
+# Static Data: Top Reputable Schools in Port Moresby
+SCHOOLS = [
+    {"name": "Korobosea International", "lat": -9.4750, "lng": 147.1820, "type": "International"},
+    {"name": "Port Moresby International", "lat": -9.4580, "lng": 147.1950, "type": "International"},
+    {"name": "Ela Murray International", "lat": -9.4780, "lng": 147.1680, "type": "International"},
+    {"name": "St Joseph's International", "lat": -9.4520, "lng": 147.1740, "type": "International"},
+    {"name": "Gordon International", "lat": -9.4250, "lng": 147.1850, "type": "International"},
+]
+
+# Static Data: Internet Coverage Zones (Mocked based on common high-speed areas)
+INTERNET_ZONES = {
+    "Waigani": {"fibre": True, "5g": True},
+    "Boroko": {"fibre": True, "5g": True},
+    "Gordons": {"fibre": True, "5g": True},
+    "Town": {"fibre": True, "5g": True},
+    "Gerehu": {"fibre": False, "5g": True},
+    "Tokarara": {"fibre": False, "5g": False},
+}
+
+# In-memory crowdsourced utility reviews
+utility_reviews: List[dict] = []
+
+@app.post("/api/utilities/review")
+def add_utility_review(review: UtilityReview, current_user: User = Depends(get_current_user)):
+    data = review.dict()
+    data["user_id"] = current_user.email or current_user.phone
+    data["created_at"] = datetime.now(timezone.utc).isoformat()
+    utility_reviews.append(data)
+    return {"status": "ok", "total_reviews": len(utility_reviews)}
+
+@app.get("/api/utilities/map")
+def get_utility_map_data(current_user: User = Depends(get_current_user)):
+    """Calculates reliability scores and returns serviceability layers."""
+    # Group reviews by suburb
+    stats = defaultdict(lambda: {"power": [], "water": []})
+    for r in utility_reviews:
+        stats[r["suburb"]][r["utility"]].append(r["rating"])
+
+    # Calculate Reliability Index (0-100)
+    reliability = {}
+    for sub, vals in stats.items():
+        p_avg = sum(vals["power"])/len(vals["power"]) if vals["power"] else 4.0 # Default fallback
+        w_avg = sum(vals["water"])/len(vals["water"]) if vals["water"] else 4.5
+        reliability[sub] = {
+            "power_score": round(p_avg * 20),
+            "water_score": round(w_avg * 20),
+            "power_reviews": len(vals["power"]),
+            "water_reviews": len(vals["water"])
+        }
+
+    return {
+        "reliability": reliability,
+        "schools": SCHOOLS,
+        "internet": INTERNET_ZONES
+    }
 
 # ── B2B Agent Intelligence Routes ─────────────────────────────────────────────
 
