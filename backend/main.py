@@ -112,16 +112,19 @@ class User(BaseModel):
     phone: Optional[str] = None
     full_name: Optional[str] = None
     disabled: Optional[bool] = None
+    role: str = "buyer" # buyer, agent, lender, developer
     auth_provider: str = "email" # email, google, facebook, phone, whatsapp
     saved_searches: List[dict] = []
     notification_prefs: dict = {"whatsapp": True, "email": False}
     documents: List[dict] = []
+    api_keys: List[dict] = []
 
 class UserCreate(BaseModel):
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
     password: Optional[str] = None
     full_name: Optional[str] = None
+    role: str = "buyer"
     auth_provider: str = "email"
 
 class UserInDB(User):
@@ -205,6 +208,7 @@ def create_user(user: UserCreate) -> UserInDB:
         hashed_password=hashed_password,
         full_name=user.full_name,
         disabled=False,
+        role=user.role,
         auth_provider=user.auth_provider
     )
 
@@ -390,6 +394,13 @@ class TokenData(BaseModel):
     sub: Optional[str] = None
     email: Optional[str] = None
 
+def check_role(role: str):
+    def role_checker(user: User = Depends(get_current_user)):
+        if user.role != role and user.role != "admin":
+            raise HTTPException(status_code=403, detail="Operation not permitted for your role")
+        return user
+    return role_checker
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -544,7 +555,7 @@ async def otp_auth(provider: str, identifier: str, name: Optional[str] = None):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {"email": user.email, "full_name": user.full_name, "phone": user.phone}
+        "user": {"email": user.email, "full_name": user.full_name, "phone": user.phone, "role": user.role}
     }
 
 @app.post("/api/auth/token", response_model=Token)
@@ -566,7 +577,8 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         "user": {
             "email": user.email,
             "phone": user.phone,
-            "full_name": user.full_name
+            "full_name": user.full_name,
+            "role": user.role
         }
     }
 
@@ -656,6 +668,55 @@ def list_jobs(current_user: User = Depends(get_current_user)): return {"jobs":so
 
 @app.get("/api/suburbs")
 def get_suburbs(current_user: User = Depends(get_current_user)): return {"suburbs":[{"name":k,"lat":v["lat"],"lng":v["lng"]} for k,v in SUBURB_COORDS.items()]}
+
+@app.post("/api/developer/keys")
+def generate_api_key(current_user: User = Depends(check_role("developer"))):
+    new_key = {
+        "key": f"png_{uuid.uuid4().hex[:16]}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "usage_count": 0,
+        "last_used": None
+    }
+    identifier = current_user.email or current_user.phone
+    if identifier not in users_db:
+        users_db[identifier] = UserInDB(**current_user.dict(), hashed_password=None)
+
+    users_db[identifier].api_keys.append(new_key)
+
+    db = _get_db()
+    if db is not None:
+        try:
+            db["users"].update_one(
+                {"$or": [{"email": current_user.email}, {"phone": current_user.phone}]},
+                {"$push": {"api_keys": new_key}}
+            )
+        except: pass
+    return new_key
+
+@app.get("/api/developer/keys")
+def get_api_keys(current_user: User = Depends(check_role("developer"))):
+    return {"api_keys": current_user.api_keys}
+
+@app.get("/api/v1/listings/export")
+def developer_listing_export(api_key: str):
+    """Simulated paid API endpoint for developers."""
+    # Validate API key (Check all users for this key)
+    found_user = None
+    for u in users_db.values():
+        if any(k["key"] == api_key for k in u.api_keys):
+            found_user = u
+            break
+
+    if not found_user:
+        raise HTTPException(401, "Invalid API Key. Please get one from the Developer Portal.")
+
+    # Increment usage (Mock)
+    listings = _load_listings()
+    return {
+        "status": "success",
+        "total": len(listings),
+        "data": listings[:100] # Return first 100 for dev preview
+    }
 
 @app.get("/api/sources")
 def get_source_list(current_user: User = Depends(get_current_user)):

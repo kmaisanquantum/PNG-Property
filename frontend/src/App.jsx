@@ -483,9 +483,19 @@ const NAV_ITEMS = [
   {id:"b2b",       icon:"🛰", label:"Agent Intel"},
   {id:"flags",     icon:"⚑", label:"Flagged"},
   {id:"sources", icon:"📡", label:"Sources"},
+  {id:"lender", icon:"🏦", label:"Lender Portal"},
+  {id:"dev", icon:"💻", label:"Dev Portal"},
+  {id:"settings", icon:"⚙️", label:"Settings"},
 ];
 
 function Sidebar({active, onNav, onLogout, user}) {
+  const filteredNav = NAV_ITEMS.filter(n => {
+    if (n.id === 'b2b' && user?.role !== 'agent' && user?.role !== 'admin') return false;
+    if (n.id === 'lender' && user?.role !== 'lender' && user?.role !== 'admin') return false;
+    if (n.id === 'dev' && user?.role !== 'developer' && user?.role !== 'admin') return false;
+    return true;
+  });
+
   return (
     <div className="sidebar-container" style={{
       background:C.bg1, borderRight:`1px solid ${C.border}`,
@@ -494,7 +504,7 @@ function Sidebar({active, onNav, onLogout, user}) {
     }}>
       <div className="sidebar-logo" style={{fontFamily:"'Barlow Condensed'",fontSize:22,fontWeight:800,color:C.teal,marginBottom:20,letterSpacing:"-.02em"}}>PD</div>
       <div className="nav-items-wrapper" style={{display:"flex", flexDirection:"column", gap:4}}>
-        {NAV_ITEMS.map(n=>(
+        {filteredNav.map(n=>(
           <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} className="nav-btn" style={{width:44,height:44,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:10,color:active===n.id?C.teal:C.text2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
             {n.icon}
           </button>
@@ -512,7 +522,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
-  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",valuation:"Property Valuation (AVM)",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
+  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",valuation:"Property Valuation (AVM)",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources", settings: "Account Settings", lender: "Lender Portal", dev: "Developer Portal"};
   return (
     <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -756,7 +766,7 @@ function ListingsView({suburbFilter}) {
   </div>;
 }
 
-function HeatmapView() {
+function HeatmapView({ user }) {
   const [data, setData] = useState(null);
   const [utilData, setUtilData] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -775,7 +785,8 @@ function HeatmapView() {
 
   const combinedSuburbs = suburbs.map(s => {
      const rel = utilData?.reliability[s.suburb] || {power_score: 80, water_score: 90};
-     return {...s, ...rel};
+     const safety = {safety_score: 75 + (s.suburb.length % 20)}; // Simulated safety score
+     return {...s, ...rel, ...safety};
   });
 
   return <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,height:"100%"}}>
@@ -815,6 +826,13 @@ function HeatmapView() {
             <Pill active={metric==="avg_price"} onClick={()=>setMetric("avg_price")}>Rent</Pill>
             <Pill active={metric==="avg_price_sqm"} onClick={()=>setMetric("avg_price_sqm")}>PGK/Sqm</Pill>
             <Pill active={metric==="power_score"} onClick={()=>setMetric("power_score")}>⚡ Power</Pill>
+            <Pill active={metric==="safety_score"} onClick={() => {
+              if (user?.role === 'buyer') {
+                alert("Premium Layer: Safety Heatmaps require an Agency subscription or one-time K5.00 unlock.");
+              } else {
+                setMetric("safety_score");
+              }
+            }}>🛡️ Safety</Pill>
           </div>
         </div>
         <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{schools: showSchools ? utilData?.schools : null}}/>
@@ -883,10 +901,11 @@ function HeatmapView() {
   </div>;
 }
 
-function AnalyticsView() {
+function AnalyticsView({ user }) {
   const [sd,setSd]=useState(null); const [src,setSrc]=useState(null); const [trends,setTrends]=useState(null);
   const [heatmap,setHeatmap]=useState(null);
   const [calc, setCalc] = useState({price: 500000, rent: 4500});
+  const [unlocked, setUnlocked] = useState(user?.role === 'agent' || user?.role === 'admin');
 
   useEffect(()=>{
     apiFetch("/analytics/supply-demand").then(d=>setSd(d||MOCK_SD));
@@ -936,12 +955,22 @@ function AnalyticsView() {
     </div>
 
     <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-      <Card style={{padding:20}}>
+      <Card style={{padding:20, position:'relative', overflow:'hidden'}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>RENT PRICE TRENDS</div>
         <div style={{display:"flex",gap:10,marginBottom:12}}>
           {[["Waigani",C.teal],["Boroko",C.violet],["Gerehu",C.amber]].map(([s,c])=><div key={s} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:C.text1}}><div style={{width:14,height:3,background:c,borderRadius:2}}/>{s}</div>)}
         </div>
-        <LineChart trends={trData}/>
+        <div style={{filter: unlocked ? 'none' : 'blur(4px)', pointerEvents: unlocked ? 'auto' : 'none', transition: 'all 0.3s'}}>
+           <LineChart trends={trData}/>
+        </div>
+        {!unlocked && (
+          <div style={{position:'absolute', inset:0, background:'rgba(5,13,26,0.6)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:20, textAlign:'center'}}>
+             <div style={{fontSize:24, marginBottom:10}}>🔒</div>
+             <div style={{fontSize:13, fontWeight:700, marginBottom:4}}>HISTORICAL TRENDS LOCKED</div>
+             <div style={{fontSize:10, color:C.text1, marginBottom:16}}>Unlock 12 months of historical data for K10.00</div>
+             <button onClick={() => {alert("Redirecting to payment..."); setUnlocked(true);}} style={{background:C.teal, color:C.bg0, border:'none', borderRadius:6, padding:'6px 16px', fontSize:11, fontWeight:700, cursor:'pointer'}}>UNLOCK ACCESS</button>
+          </div>
+        )}
       </Card>
       <Card style={{padding:20}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>LISTINGS BY SOURCE</div>
@@ -1061,7 +1090,7 @@ const RESOURCES_DATA = [
   }
 ];
 
-function B2BView() {
+function B2BView({ user }) {
   const [alerts, setAlerts] = useState([]);
   const [forecast, setForecast] = useState([]);
   const [leads, setLeads] = useState([]);
@@ -1120,10 +1149,15 @@ function B2BView() {
 
       <Card style={{padding:16, background:`rgba(20,184,200,0.05)`, border:`1px solid ${C.teal}44`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
          <div>
-            <div style={{fontWeight:700, color:C.teal}}>Lead Monetization Engine</div>
-            <div style={{fontSize:11, color:C.text2}}>Our Facebook Messenger bot pre-screens data-light users. Qualified leads are sold to agents for a small fee.</div>
+            <div style={{fontWeight:700, color:C.teal}}>Agent Intelligence Dashboard</div>
+            <div style={{fontSize:11, color:C.text2}}>
+              {user?.role === 'agent' ? "You have full access to competitor pricing and lead scoring." : "Upgrade to Agent Pro to unlock competitor tracking and hot leads."}
+            </div>
          </div>
-         <button onClick={()=>setShowBot(true)} style={{background:C.teal, border:'none', borderRadius:6, padding:'8px 16px', color:C.bg0, fontWeight:700, cursor:'pointer', fontSize:12}}>Test Messenger Bot Demo</button>
+         <div style={{display:'flex', gap:10}}>
+            <button onClick={()=>{alert("Exporting leads to CSV...");}} style={{background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:'8px 16px', color:C.text1, fontWeight:700, cursor:'pointer', fontSize:11}}>Bulk Export (.CSV)</button>
+            <button onClick={()=>setShowBot(true)} style={{background:C.teal, border:'none', borderRadius:6, padding:'8px 16px', color:C.bg0, fontWeight:700, cursor:'pointer', fontSize:12}}>Test Messenger Bot Demo</button>
+         </div>
       </Card>
 
       {/* Competitor Price Alerts */}
@@ -1325,7 +1359,7 @@ function ValuationView() {
                           <div style={{fontSize:15, fontWeight:700, color:C.green}}>✓ Premium Report Unlocked</div>
                           <Badge label={report.report_id} color={C.green} />
                        </div>
-                       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
+                       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14}}>
                           <div style={{background:C.bg3, padding:12, borderRadius:8}}>
                              <div style={{fontSize:9, color:C.text2, marginBottom:4}}>SUBURB DEMAND</div>
                              <div style={{fontSize:14, fontWeight:700, color:C.teal}}>{report.market_trends.suburb_demand}</div>
@@ -1333,6 +1367,27 @@ function ValuationView() {
                           <div style={{background:C.bg3, padding:12, borderRadius:8}}>
                              <div style={{fontSize:9, color:C.text2, marginBottom:4}}>5-YEAR FORECAST</div>
                              <div style={{fontSize:14, fontWeight:700, color:C.green}}>{report.investment_analysis["5_year_forecast"]}</div>
+                          </div>
+                       </div>
+
+                       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14, marginBottom:14}}>
+                          <div style={{background:C.bg3, padding:12, borderRadius:8}}>
+                             <div style={{fontSize:9, color:C.text2, marginBottom:4}}>SAFETY SCORE</div>
+                             <div style={{fontSize:14, fontWeight:700, color:report.neighborhood_safety.score > 70 ? C.green : C.amber}}>
+                               {report.neighborhood_safety.score}% ({report.neighborhood_safety.status})
+                             </div>
+                             <div style={{fontSize:8, color:C.text2, marginTop:4}}>Patrol: {report.neighborhood_safety.patrol_presence}</div>
+                          </div>
+                          <div style={{background:C.bg3, padding:12, borderRadius:8}}>
+                             <div style={{fontSize:9, color:C.text2, marginBottom:4}}>PRICE HISTORY</div>
+                             <div style={{display:'flex', flexDirection:'column', gap:2}}>
+                                {report.price_history.slice(-3).map(h => (
+                                  <div key={h.year} style={{display:'flex', justifyContent:'space-between', fontSize:10}}>
+                                    <span style={{color:C.text2}}>{h.year}</span>
+                                    <span style={{fontWeight:600}}>{fmt(h.avg_price)}</span>
+                                  </div>
+                                ))}
+                             </div>
                           </div>
                        </div>
                        <button style={{width:'100%', marginTop:14, background:C.bg3, border:`1px solid ${C.border}`, color:C.text0, borderRadius:6, padding:10, fontWeight:700}}>DOWNLOAD PDF REPORT</button>
@@ -1352,7 +1407,7 @@ function ValuationView() {
   );
 }
 
-function VaultView() {
+function VaultView({ user }) {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [packaging, setPackaging] = useState(false);
@@ -1461,7 +1516,13 @@ function VaultView() {
                   <div style={{background:C.bg3, padding:8, borderRadius:6, fontSize:10, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:10, wordBreak:'break-all'}}>
                      {shareData.share_url}
                   </div>
-                  <div style={{fontSize:11, color:C.text2}}>Expires in 7 days. Share this link with your bank officer.</div>
+                  <div style={{fontSize:11, color:C.text2, marginBottom:16}}>Expires in 7 days. Share this link with your bank officer.</div>
+
+                  <div style={{fontSize:10, color:C.text1, marginBottom:8, borderTop:`1px solid ${C.bg3}`, paddingTop:12}}>DIRECT SUBMISSION</div>
+                  <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                     <button onClick={()=>{alert("Application submitted to BSP Lending Team!");}} style={{background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0, fontSize:10, fontWeight:700, cursor:'pointer'}}>SUBMIT TO BSP</button>
+                     <button onClick={()=>{alert("Application submitted to Kina Bank!");}} style={{background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0, fontSize:10, fontWeight:700, cursor:'pointer'}}>SUBMIT TO KINA BANK</button>
+                  </div>
                </Card>
              )}
           </div>
@@ -1517,6 +1578,168 @@ function NotificationsView() {
           ))}
           {!searches.length && <div style={{color:C.text2, fontSize:13}}>No active followed searches yet. Go to Listings to start following.</div>}
        </div>
+    </div>
+  );
+}
+
+function LenderPortalView() {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate fetching mortgage-ready leads
+    setTimeout(() => {
+      setLeads([
+        {id: "L1", name: "John Doe", suburb: "Waigani", budget: "K500,000", score: 88, docs: 5},
+        {id: "L2", name: "Sarah Smith", suburb: "Boroko", budget: "K750,000", score: 92, docs: 5},
+        {id: "L3", name: "Michael Wong", suburb: "Gordons", budget: "K1,200,000", score: 75, docs: 4},
+      ]);
+      setLoading(false);
+    }, 800);
+  }, []);
+
+  if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+       <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
+          <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14}}>LENDER DASHBOARD (LEAD GEN)</div>
+          <div style={{fontSize:15, fontWeight:700, marginBottom:8}}>Qualified Mortgage Leads</div>
+          <div style={{fontSize:12, color:C.text1}}>These users have completed their Document Vault and are ready for pre-approval.</div>
+       </Card>
+
+       <Card>
+          <table style={{width:'100%', borderCollapse:'collapse'}}>
+             <thead>
+                <tr style={{borderBottom:`1px solid ${C.border}`}}>
+                   <th style={{padding:12, textAlign:'left', fontSize:10, color:C.text2}}>APPLICANT</th>
+                   <th style={{padding:12, textAlign:'left', fontSize:10, color:C.text2}}>TARGET SUBURB</th>
+                   <th style={{padding:12, textAlign:'left', fontSize:10, color:C.text2}}>BUDGET</th>
+                   <th style={{padding:12, textAlign:'left', fontSize:10, color:C.text2}}>READINESS</th>
+                   <th style={{padding:12, textAlign:'left', fontSize:10, color:C.text2}}>ACTION</th>
+                </tr>
+             </thead>
+             <tbody>
+                {leads.map(l => (
+                   <tr key={l.id} style={{borderBottom:`1px solid ${C.bg3}`}}>
+                      <td style={{padding:12}}>
+                         <div style={{fontSize:13, fontWeight:600}}>{l.name}</div>
+                         <div style={{fontSize:10, color:C.text2}}>ID: {l.id}</div>
+                      </td>
+                      <td style={{padding:12, fontSize:12}}>{l.suburb}</td>
+                      <td style={{padding:12, fontSize:12, fontWeight:700, color:C.teal}}>{l.budget}</td>
+                      <td style={{padding:12}}>
+                         <div style={{display:'flex', alignItems:'center', gap:8}}>
+                            <Badge label={`${l.docs}/5 DOCS`} color={l.docs === 5 ? C.green : C.amber} small />
+                            <span style={{fontSize:10, color:C.text1}}>{l.score}% Score</span>
+                         </div>
+                      </td>
+                      <td style={{padding:12}}>
+                         <button style={{background:C.teal, border:'none', borderRadius:4, padding:"6px 12px", color:C.bg0, fontSize:10, fontWeight:700, cursor:'pointer'}}>VIEW BANK FOLDER</button>
+                      </td>
+                   </tr>
+                ))}
+             </tbody>
+          </table>
+       </Card>
+    </div>
+  );
+}
+
+function DeveloperPortalView() {
+  const [keys, setKeys] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadKeys = async () => {
+    setLoading(true);
+    const res = await apiFetch("/developer/keys");
+    if (res) setKeys(res.api_keys || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadKeys(); }, []);
+
+  const generateKey = async () => {
+    const res = await apiFetch("/developer/keys", { method: "POST" });
+    if (res) loadKeys();
+  };
+
+  if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+       <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
+          <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14}}>DEVELOPER PORTAL</div>
+          <div style={{fontSize:15, fontWeight:700, marginBottom:8}}>Structured Data API</div>
+          <div style={{fontSize:12, color:C.text1, lineHeight:1.5}}>
+             Integrate PNG property data into your own applications. Our API provides cleaned,
+             deduplicated listings in JSON format. Usage is billed per 1,000 requests.
+          </div>
+       </Card>
+
+       <Card style={{padding:24}}>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
+             <div style={{fontSize:16, fontWeight:700}}>Your API Keys</div>
+             <button onClick={generateKey} style={{background:C.teal, color:C.bg0, border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer'}}>Generate New Key</button>
+          </div>
+
+          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+             {keys.map((k, i) => (
+               <div key={i} style={{background:C.bg3, padding:16, borderRadius:12, border:`1px solid ${C.border}`}}>
+                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:10}}>
+                     <code style={{color:C.teal, fontSize:13, fontWeight:700}}>{k.key}</code>
+                     <Badge label="ACTIVE" color={C.green} small />
+                  </div>
+                  <div style={{display:'flex', gap:20, fontSize:11, color:C.text2}}>
+                     <span>Created: {rel(k.created_at)}</span>
+                     <span>Requests: {k.usage_count}</span>
+                  </div>
+               </div>
+             ))}
+             {!keys.length && <div style={{textAlign:'center', padding:20, color:C.text2, fontSize:13}}>No API keys generated yet.</div>}
+          </div>
+       </Card>
+
+       <Card style={{padding:24}}>
+          <div style={{fontSize:16, fontWeight:700, marginBottom:16}}>Documentation Quickstart</div>
+          <div style={{background:C.bg0, padding:16, borderRadius:8, fontFamily:"'IBM Plex Mono'", fontSize:12, color:C.teal, border:`1px solid ${C.border}`}}>
+             GET /api/v1/listings/export?api_key=YOUR_KEY
+          </div>
+       </Card>
+    </div>
+  );
+}
+
+function SettingsView({ user }) {
+  const planNames = {buyer: "Free Plan", agent: "Agency Pro (K150/mo)", lender: "Lender Enterprise", developer: "Developer API Access"};
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+       <Card style={{padding:24}}>
+          <div style={{fontSize:18, fontWeight:800, marginBottom:16}}>Subscription & Billing</div>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:C.bg3, padding:16, borderRadius:12}}>
+             <div>
+                <div style={{fontSize:10, color:C.text2, marginBottom:4}}>CURRENT PLAN</div>
+                <div style={{fontSize:16, fontWeight:700, color:C.teal}}>{planNames[user?.role] || "Unknown Plan"}</div>
+             </div>
+             <button style={{background:C.teal, color:C.bg0, border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700, cursor:'pointer'}}>Manage Plan</button>
+          </div>
+          <div style={{marginTop:20, fontSize:12, color:C.text1}}>
+             Your next billing date is April 15, 2024.
+          </div>
+       </Card>
+       <Card style={{padding:24}}>
+          <div style={{fontSize:18, fontWeight:800, marginBottom:16}}>Personal Information</div>
+          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+             <div style={{display:'grid', gridTemplateColumns:'120px 1fr'}}>
+                <span style={{fontSize:12, color:C.text2}}>Full Name</span>
+                <span style={{fontSize:12, fontWeight:600}}>{user?.full_name}</span>
+             </div>
+             <div style={{display:'grid', gridTemplateColumns:'120px 1fr'}}>
+                <span style={{fontSize:12, color:C.text2}}>Identifier</span>
+                <span style={{fontSize:12, fontWeight:600}}>{user?.email || user?.phone}</span>
+             </div>
+          </div>
+       </Card>
     </div>
   );
 }
@@ -1598,14 +1821,17 @@ export default function App() {
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources} onNav={setView}/>}
             {view==="listings" &&<ListingsView/>}
-            {view==="heatmap"  &&<HeatmapView/>}
-            {view==="analytics"&&<AnalyticsView/>}
+            {view==="heatmap"  &&<HeatmapView user={user}/>}
+            {view==="analytics"&&<AnalyticsView user={user}/>}
             {view==="notifications" && <NotificationsView />}
-            {view==="vault" && <VaultView />}
+            {view==="vault" && <VaultView user={user}/>}
             {view==="valuation" && <ValuationView />}
-            {view==="b2b"      &&<B2BView/>}
+            {view==="b2b"      &&<B2BView user={user}/>}
             {view==="flags"    &&<FlagsView/>}
             {view==="sources"&&<ResourcesView/>}
+            {view==="lender" && <LenderPortalView />}
+            {view==="dev" && <DeveloperPortalView />}
+            {view==="settings" && <SettingsView user={user}/>}
           </div>
         </div>
       </div>

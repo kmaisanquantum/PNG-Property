@@ -81,10 +81,33 @@ def generate_market_report(valuation: Dict[str, Any]) -> Dict[str, Any]:
     """
     Prepares a detailed market comparison report object.
     """
+    import random
+    suburb = valuation.get("suburb", "Waigani")
+
+    # Neighborhood Safety Score (Simulated)
+    safety_score = random.randint(40, 95)
+    safety_label = "Secure" if safety_score > 75 else "Developing" if safety_score > 55 else "Advisory Required"
+
+    # Price History (Simulated 5-year data)
+    base_price = valuation["estimate"]
+    history = []
+    for i in range(5, 0, -1):
+        year = 2024 - i
+        # Historical growth ~3-7%
+        p = base_price * (0.8 + (i * 0.04))
+        history.append({"year": year, "avg_price": int(p)})
+
     return {
         "report_id": f"VAL-{random_hex(6)}",
         "generated_at": "2024-03-28T12:00:00Z",
         "valuation": valuation,
+        "neighborhood_safety": {
+            "score": safety_score,
+            "status": safety_label,
+            "incidents_trend": "Decreasing",
+            "patrol_presence": "Regular" if safety_score > 70 else "Occasional"
+        },
+        "price_history": history,
         "market_trends": {
             "suburb_demand": "High",
             "inventory_level": "Low",
@@ -92,7 +115,7 @@ def generate_market_report(valuation: Dict[str, Any]) -> Dict[str, Any]:
         },
         "investment_analysis": {
             "gross_yield": "8.5%",
-            "5_year_forecast": "+12.4% appreciation"
+            "5_year_forecast": f"+{random.randint(8, 18)}.4% appreciation"
         }
     }
 
