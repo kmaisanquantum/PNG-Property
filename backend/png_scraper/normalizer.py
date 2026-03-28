@@ -110,6 +110,8 @@ class NormalizedListing:
     contact_info: dict             # {phones: [], emails: []}
     is_middleman: bool
     middleman_flags: list[str]
+    health_score: int              # 0-100 based on completeness
+    is_verified: bool              # Cross-referenced with trusted registries
     source_text: str
 
 
@@ -331,33 +333,52 @@ def detect_middleman(text: str) -> tuple[bool, list[str]]:
 # MAIN NORMALIZER
 # ---------------------------------------------------------------------------
 
+def calculate_health_score(price, suburb, p_type, beds, sqm, contacts, text) -> int:
+    """Assign a score (0-100) based on data completeness and descriptive quality."""
+    score = 0
+    if price: score += 25
+    if suburb: score += 15
+    if p_type: score += 15
+    if beds: score += 10
+    if sqm: score += 10
+    if contacts.get("phones"): score += 15
+    if len(text) > 150: score += 10
+    return min(100, score)
+
+# Known business landlines and trusted agency numbers in PNG
+TRUSTED_REGISTRY = [
+    "+675 320 0222", # Strickland
+    "+675 321 4088", # Professionals
+    "+675 320 0651", # Ray White
+    "+675 321 2121", # Century 21
+    "+675 325 2544", # DAC
+]
+
+def check_verification(contacts: dict) -> bool:
+    """Verify listing by cross-referencing contact info with known business registries."""
+    phones = contacts.get("phones", [])
+    for p in phones:
+        # Normalize for comparison
+        p_clean = p.replace(" ", "").replace("-", "")
+
+        # 1. Exact or cleaned match against registry
+        if p in TRUSTED_REGISTRY or any(p_clean == tr.replace(" ","").replace("-","") for tr in TRUSTED_REGISTRY):
+            return True
+
+        # 2. Heuristic: PNG landlines (3xx xxxx) are highly credible
+        if p_clean.startswith("+6753") and len(p_clean) == 12:
+            return True
+        if p_clean.startswith("3") and len(p_clean) == 7:
+            return True
+
+    return False
+
 def normalize(raw_text: str) -> dict:
     """
-    Core normalization function.
+    Core normalization function with Trust & Verification enhancements.
 
     Input : raw string from Facebook post or scraped listing.
     Output: structured dict ready for MongoDB insertion.
-
-    Example input:
-        "3bdrm house in Boroko, K500 per week, call 71234567 or 72345678,
-         available now. No agents please!"
-
-    Example output:
-        {
-          "price_pgk_monthly": 2167,
-          "price_raw": "k500 per week",
-          "price_confidence": "high",
-          "location": "boroko",
-          "suburb": "Boroko",
-          "property_type": "House",
-          "bedrooms": 3,
-          "sqm": null,
-          "is_for_sale": false,
-          "contact_info": {"phones": ["+675 7123 4567", "+675 7234 5678"], "emails": []},
-          "is_middleman": false,
-          "middleman_flags": [],
-          "source_text": "3bdrm house in Boroko..."
-        }
     """
     price_monthly, price_raw, price_confidence = parse_price(raw_text)
     location_raw, suburb = parse_location(raw_text)
@@ -367,6 +388,11 @@ def normalize(raw_text: str) -> dict:
     is_sale = parse_is_sale(raw_text)
     contact_info = parse_contact_info(raw_text)
     is_middleman, middleman_flags = detect_middleman(raw_text)
+
+    health_score = calculate_health_score(
+        price_monthly, suburb, property_type, bedrooms, sqm, contact_info, raw_text
+    )
+    is_verified = check_verification(contact_info)
 
     listing = NormalizedListing(
         price_pgk_monthly=price_monthly,
@@ -381,6 +407,8 @@ def normalize(raw_text: str) -> dict:
         contact_info=contact_info,
         is_middleman=is_middleman,
         middleman_flags=middleman_flags,
+        health_score=health_score,
+        is_verified=is_verified,
         source_text=raw_text[:500],   # truncate for storage
     )
     return asdict(listing)

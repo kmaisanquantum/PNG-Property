@@ -134,6 +134,9 @@ class Listing:
     bedrooms:        Optional[int]  = None
     sqm:             Optional[float] = None
     is_for_sale:     bool = False
+    health_score:    int = 0
+    is_middleman:    bool = False
+    group_id:        Optional[str] = None
     raw_text:        str            = ""
 
     def to_dict(self) -> dict:
@@ -279,12 +282,27 @@ def make_listing(
     is_verified: bool,
     raw_text: str = "",
 ) -> Listing:
+    # Import trust helpers from normalizer to avoid logic duplication
+    from png_scraper.normalizer import calculate_health_score, check_verification, parse_contact_info, detect_middleman
+
     price_k, _, conf = normalise_price(price_raw)
     combined = f"{title} {raw_text} {location}"
     is_sale = detect_is_sale(combined, listing_url)
 
-    # If it's for sale, the "monthly price" normalized from a huge number
-    # might actually be the total price. We'll handle that in analytics.
+    sub_name = detect_suburb(combined)
+    p_type   = classify_type(combined)
+    beds     = extract_bedrooms(combined)
+    sqm_val  = extract_sqm(combined)
+
+    contacts = parse_contact_info(combined)
+    is_mid, _ = detect_middleman(combined)
+
+    # Enhanced Verification: Cross-verify if not already verified by source
+    if not is_verified:
+        is_verified = check_verification(contacts)
+
+    # Listing Health Score: Assign 0-100 based on data completeness
+    health = calculate_health_score(price_k, sub_name, p_type, beds, sqm_val, contacts, combined)
 
     return Listing(
         listing_id      = hashlib.md5(f"{listing_url}:{price_raw}".encode()).hexdigest(),
@@ -294,13 +312,15 @@ def make_listing(
         price_monthly_k = price_k,
         price_confidence= conf,
         location        = location.strip(),
-        suburb          = detect_suburb(combined),
+        suburb          = sub_name,
         listing_url     = listing_url,
         is_verified     = is_verified,
-        property_type   = classify_type(combined),
-        bedrooms        = extract_bedrooms(combined),
-        sqm             = extract_sqm(combined),
+        property_type   = p_type,
+        bedrooms        = beds,
+        sqm             = sqm_val,
         is_for_sale     = is_sale,
+        is_middleman    = is_mid,
+        health_score    = health,
         raw_text        = raw_text[:400],
     )
 
