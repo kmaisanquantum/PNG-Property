@@ -437,6 +437,7 @@ const NAV_ITEMS = [
   {id:"listings",  icon:"≡", label:"Listings"},
   {id:"heatmap",   icon:"◉", label:"Heatmap"},
   {id:"analytics", icon:"∿", label:"Analytics"},
+  {id:"notifications", icon:"🔔", label:"Alerts"},
   {id:"b2b",       icon:"🛰", label:"Agent Intel"},
   {id:"flags",     icon:"⚑", label:"Flagged"},
   {id:"sources", icon:"📡", label:"Sources"},
@@ -469,7 +470,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
-  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
+  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
   return (
     <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -624,6 +625,21 @@ function ListingsView({suburbFilter}) {
         </select>
         <input placeholder="Min K" value={minPrice} onChange={e=>setMinPrice(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text0,fontSize:12,width:80}}/>
         <input placeholder="Max K" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text0,fontSize:12,width:80}}/>
+        <button
+          onClick={async () => {
+             const name = suburb || type || "New Search";
+             const criteria = { suburb, type, min_price: minPrice, max_price: maxPrice };
+             const res = await apiFetch("/notifications/follow", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({ name, criteria })
+             });
+             if (res) alert(`Now following: ${name}. You will receive WhatsApp alerts for new matches.`);
+          }}
+          style={{background:C.bg3, border:`1px solid ${C.teal}`, borderRadius:6, padding:"6px 12px", color:C.teal, fontSize:11, fontWeight:700, cursor:'pointer'}}
+        >
+          🔔 FOLLOW SEARCH
+        </button>
         <span style={{fontSize:11,color:C.text2,marginLeft:"auto"}}>{total} listings</span>
         {loading&&<Spinner/>}
       </div>
@@ -907,6 +923,8 @@ function B2BView() {
   const [forecast, setForecast] = useState([]);
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showBot, setShowBot] = useState(false);
+  const [botStep, setBotStep] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -924,8 +942,47 @@ function B2BView() {
 
   if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
 
+  const botQuestions = [
+    "What is your monthly budget (PGK)?",
+    "Which suburb are you most interested in (Waigani, Boroko, etc.)?",
+    "When are you planning to move?",
+    "Thank you! You have been PRE-QUALIFIED. An agent will contact you soon."
+  ];
+
   return (
     <div style={{display:'flex', flexDirection:'column', gap:20}}>
+      {/* Bot Showcase Modal */}
+      {showBot && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center'}}>
+           <Card style={{width:400, padding:24, border:`2px solid ${C.teal}`}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20}}>
+                 <span style={{fontWeight:700}}>Facebook Messenger Bot (Simulation)</span>
+                 <button onClick={()=>setShowBot(false)} style={{background:'none', border:'none', color:C.text2, cursor:'pointer'}}>✕</button>
+              </div>
+              <div style={{background:C.bg3, padding:12, borderRadius:8, marginBottom:16, fontSize:13}}>
+                 <div style={{color:C.teal, fontSize:10, marginBottom:4, fontWeight:700}}>PNG PROPERTY BOT</div>
+                 {botQuestions[botStep]}
+              </div>
+              {botStep < 3 ? (
+                <div style={{display:'flex', gap:8}}>
+                   <input autoFocus placeholder="Type your answer..." style={{flex:1, background:C.bg1, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0, fontSize:13}} onKeyDown={e => e.key === 'Enter' && setBotStep(s => s + 1)} />
+                   <button onClick={()=>setBotStep(s=>s+1)} style={{background:C.teal, border:'none', borderRadius:6, padding:'0 16px', color:C.bg0, fontWeight:700, cursor:'pointer'}}>Send</button>
+                </div>
+              ) : (
+                <button onClick={()=>{setShowBot(false); setBotStep(0);}} style={{width:'100%', background:C.teal, border:'none', borderRadius:6, padding:10, color:C.bg0, fontWeight:700, cursor:'pointer'}}>Close & View Lead in Dashboard</button>
+              )}
+           </Card>
+        </div>
+      )}
+
+      <Card style={{padding:16, background:`rgba(20,184,200,0.05)`, border:`1px solid ${C.teal}44`, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+         <div>
+            <div style={{fontWeight:700, color:C.teal}}>Lead Monetization Engine</div>
+            <div style={{fontSize:11, color:C.text2}}>Our Facebook Messenger bot pre-screens data-light users. Qualified leads are sold to agents for a small fee.</div>
+         </div>
+         <button onClick={()=>setShowBot(true)} style={{background:C.teal, border:'none', borderRadius:6, padding:'8px 16px', color:C.bg0, fontWeight:700, cursor:'pointer', fontSize:12}}>Test Messenger Bot Demo</button>
+      </Card>
+
       {/* Competitor Price Alerts */}
       <div>
         <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:14, letterSpacing:'0.1em'}}>COMPETITOR PRICING ALERTS</div>
@@ -990,7 +1047,10 @@ function B2BView() {
                     <div style={{fontSize:10, color:C.text2}}>Interested in {l.interest}</div>
                   </td>
                   <td style={{padding:8}}>
-                    <Badge label={l.score} color={l.status === 'Hot' ? C.green : C.amber} small />
+                    <div style={{display:'flex', alignItems:'center', gap:6}}>
+                       <Badge label={l.score} color={l.status === 'Hot' ? C.green : C.amber} small />
+                       {l.is_qualified && <span title="Bot Qualified" style={{fontSize:12}}>✅</span>}
+                    </div>
                   </td>
                   <td style={{padding:8, fontSize:11, color:C.text2}}>{l.last_active}</td>
                 </tr>
@@ -999,6 +1059,57 @@ function B2BView() {
           </table>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function NotificationsView() {
+  const [searches, setSearches] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch("/notifications/active").then(d => {
+      setSearches(d?.saved_searches || []);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+       <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
+          <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14, letterSpacing:'0.1em'}}>WHATSAPP PRICE DROP ALERTS</div>
+          <div style={{fontSize:14, color:C.text1, lineHeight:1.5}}>
+             PNG users on social plans can now "Follow" any search or specific listing.
+             Our engine monitors the market 24/7 and pings your WhatsApp immediately when:
+             <ul style={{marginTop:10, marginLeft:20}}>
+                <li>A property price drops by &gt;5%</li>
+                <li>A new listing matching your criteria is discovered</li>
+                <li>A verified agency listing becomes available</li>
+             </ul>
+          </div>
+       </Card>
+
+       <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:4, letterSpacing:'0.1em'}}>YOUR ACTIVE ALERTS</div>
+       <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:14}}>
+          {searches.map((s, i) => (
+            <Card key={i} style={{padding:18}}>
+               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
+                  <div style={{fontSize:15, fontWeight:700}}>{s.name}</div>
+                  <Badge label="ACTIVE" color={C.green} small />
+               </div>
+               <div style={{fontSize:11, color:C.text2, marginBottom:12}}>
+                  Criteria: {Object.entries(s.criteria).filter(([_,v])=>v).map(([k,v]) => `${k}=${v}`).join(", ")}
+               </div>
+               <div style={{display:'flex', gap:8}}>
+                  <button style={{flex:1, background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:6, color:C.text2, fontSize:11}}>Edit</button>
+                  <button style={{flex:1, background:C.bg3, border:`1px solid ${C.red}44`, borderRadius:6, padding:6, color:C.red, fontSize:11}}>Delete</button>
+               </div>
+            </Card>
+          ))}
+          {!searches.length && <div style={{color:C.text2, fontSize:13}}>No active followed searches yet. Go to Listings to start following.</div>}
+       </div>
     </div>
   );
 }
@@ -1082,6 +1193,7 @@ export default function App() {
             {view==="listings" &&<ListingsView/>}
             {view==="heatmap"  &&<HeatmapView/>}
             {view==="analytics"&&<AnalyticsView/>}
+            {view==="notifications" && <NotificationsView />}
             {view==="b2b"      &&<B2BView/>}
             {view==="flags"    &&<FlagsView/>}
             {view==="sources"&&<ResourcesView/>}
