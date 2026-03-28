@@ -772,6 +772,44 @@ def package_vault(current_user: User = Depends(get_current_user)):
         "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     }
 
+# ── Integrated Property Valuation Engine (AVM) ───────────────────────────────
+
+class ValuationRequest(BaseModel):
+    suburb: str
+    property_type: str
+    bedrooms: int
+    sqm: Optional[float] = None
+    is_for_sale: bool = True
+
+@app.post("/api/valuation/estimate")
+def get_valuation_estimate(req: ValuationRequest, current_user: User = Depends(get_current_user)):
+    from png_scraper.valuation_engine import estimate_property_value
+    listings = _load_listings()
+    estimate = estimate_property_value(
+        listings, req.suburb, req.property_type, req.bedrooms, req.sqm, req.is_for_sale
+    )
+    if "error" in estimate:
+        raise HTTPException(400, estimate["error"])
+    return estimate
+
+@app.post("/api/valuation/report")
+def get_detailed_report(req: ValuationRequest, payment_ref: str, current_user: User = Depends(get_current_user)):
+    """Unlocks a detailed PDF-style report after payment verification (mocked)."""
+    # Mock Payment Verification (Lumi/Cellmoni)
+    if not payment_ref.startswith("PAY-"):
+        raise HTTPException(402, "Invalid or missing payment reference from Lumi/Cellmoni")
+
+    from png_scraper.valuation_engine import estimate_property_value, generate_market_report
+    listings = _load_listings()
+    val = estimate_property_value(listings, req.suburb, req.property_type, req.bedrooms, req.sqm, req.is_for_sale)
+    if "error" in val:
+        raise HTTPException(400, val["error"])
+
+    report = generate_market_report(val)
+    report["payment_verified"] = True
+    report["payment_ref"] = payment_ref
+    return report
+
 # ── B2B Agent Intelligence Routes ─────────────────────────────────────────────
 
 @app.get("/api/b2b/alerts")

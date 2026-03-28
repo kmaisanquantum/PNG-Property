@@ -439,6 +439,7 @@ const NAV_ITEMS = [
   {id:"analytics", icon:"∿", label:"Analytics"},
   {id:"notifications", icon:"🔔", label:"Alerts"},
   {id:"vault",       icon:"💼", label:"Vault"},
+  {id:"valuation",   icon:"🏷️", label:"Valuation"},
   {id:"b2b",       icon:"🛰", label:"Agent Intel"},
   {id:"flags",     icon:"⚑", label:"Flagged"},
   {id:"sources", icon:"📡", label:"Sources"},
@@ -471,7 +472,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
-  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
+  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",valuation:"Property Valuation (AVM)",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
   return (
     <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -1064,6 +1065,152 @@ function B2BView() {
   );
 }
 
+function ValuationView() {
+  const [form, setForm] = useState({suburb:"Waigani", type:"House", bedrooms:3, sqm: 200});
+  const [estimate, setEstimate] = useState(null);
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showPay, setShowPay] = useState(false);
+
+  const getEstimate = async () => {
+    setLoading(true);
+    const res = await apiFetch("/valuation/estimate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(form)
+    });
+    setEstimate(res);
+    setLoading(false);
+  };
+
+  const getReport = async (payRef) => {
+    setLoading(true);
+    const res = await apiFetch(`/valuation/report?payment_ref=${payRef}`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(form)
+    });
+    if (res) setReport(res);
+    setShowPay(false);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+      {/* Payment Modal */}
+      {showPay && (
+        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center'}}>
+           <Card style={{width:400, padding:24, textAlign:'center'}}>
+              <div style={{fontSize:18, fontWeight:800, marginBottom:10}}>Detailed Market Comparison</div>
+              <div style={{fontSize:13, color:C.text1, marginBottom:20}}>Unlocking this report costs <b>K25.00</b> via Lumi or Cellmoni.</div>
+              <div style={{background:C.bg3, padding:16, borderRadius:8, marginBottom:20, textAlign:'left'}}>
+                 <div style={{fontSize:10, color:C.text2, marginBottom:4}}>MOCK PAYMENT REFERENCE</div>
+                 <code style={{color:C.teal}}>PAY-AVM-123456</code>
+              </div>
+              <div style={{display:'flex', gap:10}}>
+                 <button onClick={()=>setShowPay(false)} style={{flex:1, background:C.bg1, border:`1px solid ${C.border}`, color:C.text1, borderRadius:6, padding:10}}>Cancel</button>
+                 <button onClick={()=>getReport("PAY-AVM-123456")} style={{flex:1, background:C.teal, color:C.bg0, border:'none', borderRadius:6, padding:10, fontWeight:700}}>Verify & Unlock</button>
+              </div>
+           </Card>
+        </div>
+      )}
+
+      <div style={{display:'grid', gridTemplateColumns:'340px 1fr', gap:20}}>
+         <Card style={{padding:24, height:'fit-content'}}>
+            <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>VALUE MY HOME</div>
+            <div style={{display:'flex', flexDirection:'column', gap:16}}>
+               <div>
+                  <div style={{fontSize:10, color:C.text2, marginBottom:4}}>SUBURB</div>
+                  <select value={form.suburb} onChange={e=>setForm({...form, suburb: e.target.value})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}}>
+                     {SUBURBS.map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+               </div>
+               <div>
+                  <div style={{fontSize:10, color:C.text2, marginBottom:4}}>PROPERTY TYPE</div>
+                  <select value={form.type} onChange={e=>setForm({...form, type: e.target.value})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}}>
+                     {TYPES.map(t=><option key={t} value={t}>{t}</option>)}
+                  </select>
+               </div>
+               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+                  <div>
+                     <div style={{fontSize:10, color:C.text2, marginBottom:4}}>BEDROOMS</div>
+                     <input type="number" value={form.bedrooms} onChange={e=>setForm({...form, bedrooms: Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}} />
+                  </div>
+                  <div>
+                     <div style={{fontSize:10, color:C.text2, marginBottom:4}}>LAND SIZE (SQM)</div>
+                     <input type="number" value={form.sqm} onChange={e=>setForm({...form, sqm: Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}} />
+                  </div>
+               </div>
+               <button onClick={getEstimate} style={{width:'100%', background:C.teal, color:C.bg0, border:'none', borderRadius:8, padding:12, fontWeight:700, marginTop:10}}>
+                  {loading ? "CALCULATING..." : "GENERATE FREE ESTIMATE"}
+               </button>
+            </div>
+         </Card>
+
+         <div style={{display:'flex', flexDirection:'column', gap:20}}>
+            {estimate ? (
+               <Card style={{padding:24, background:`linear-gradient(135deg, ${C.bg1}, #0d1e30)`, animation:'fadeUp 0.3s ease'}}>
+                  <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24}}>
+                     <div>
+                        <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:4}}>ESTIMATED MARKET VALUE</div>
+                        <div style={{fontSize:36, fontWeight:800, color:C.text0}}>{fmt(estimate.estimate)}</div>
+                        <div style={{fontSize:12, color:C.text1}}>Range: {fmt(estimate.low_bound)} – {fmt(estimate.high_bound)}</div>
+                     </div>
+                     <div style={{textAlign:'right'}}>
+                        <div style={{fontSize:24, fontWeight:800, color:estimate.confidence > 70 ? C.green : C.amber}}>{estimate.confidence}%</div>
+                        <div style={{fontSize:9, color:C.text2}}>CONFIDENCE SCORE</div>
+                     </div>
+                  </div>
+
+                  <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:12}}>LOCAL COMPARABLES (RECENT SCRAPES)</div>
+                  <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:24}}>
+                     {estimate.comparables.map((c, i) => (
+                        <div key={i} style={{background:C.bg3, padding:10, borderRadius:8, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                           <div style={{fontSize:13}}>{c.title} <span style={{fontSize:10, color:C.text2}}>via {c.source}</span></div>
+                           <div style={{fontWeight:700, color:C.teal}}>{fmt(c.price)}</div>
+                        </div>
+                     ))}
+                  </div>
+
+                  {!report ? (
+                    <div style={{background:C.bg2, border:`1px solid ${C.teal}44`, padding:20, borderRadius:12, textAlign:'center'}}>
+                       <div style={{fontSize:15, fontWeight:700, marginBottom:8}}>Unlock Premium Market Report</div>
+                       <div style={{fontSize:12, color:C.text2, marginBottom:16}}>Get detailed investment analysis, 5-year price forecasts, and demand insights for {form.suburb}.</div>
+                       <button onClick={()=>setShowPay(true)} style={{background:C.teal, color:C.bg0, border:'none', borderRadius:6, padding:'8px 16px', fontWeight:700}}>UNLOCK FOR K25.00</button>
+                    </div>
+                  ) : (
+                    <div style={{background:`rgba(34,197,94,0.05)`, border:`1px solid ${C.green}44`, padding:20, borderRadius:12, animation:'fadeUp 0.3s ease'}}>
+                       <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
+                          <div style={{fontSize:15, fontWeight:700, color:C.green}}>✓ Premium Report Unlocked</div>
+                          <Badge label={report.report_id} color={C.green} />
+                       </div>
+                       <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
+                          <div style={{background:C.bg3, padding:12, borderRadius:8}}>
+                             <div style={{fontSize:9, color:C.text2, marginBottom:4}}>SUBURB DEMAND</div>
+                             <div style={{fontSize:14, fontWeight:700, color:C.teal}}>{report.market_trends.suburb_demand}</div>
+                          </div>
+                          <div style={{background:C.bg3, padding:12, borderRadius:8}}>
+                             <div style={{fontSize:9, color:C.text2, marginBottom:4}}>5-YEAR FORECAST</div>
+                             <div style={{fontSize:14, fontWeight:700, color:C.green}}>{report.investment_analysis["5_year_forecast"]}</div>
+                          </div>
+                       </div>
+                       <button style={{width:'100%', marginTop:14, background:C.bg3, border:`1px solid ${C.border}`, color:C.text0, borderRadius:6, padding:10, fontWeight:700}}>DOWNLOAD PDF REPORT</button>
+                    </div>
+                  )}
+               </Card>
+            ) : (
+               <Card style={{padding:60, textAlign:'center', color:C.text2}}>
+                  <div style={{fontSize:48, marginBottom:20}}>🏠</div>
+                  <div style={{fontSize:18, fontWeight:700, color:C.text1}}>Ready to value your property?</div>
+                  <div style={{fontSize:13}}>Fill in the details on the left to generate an instant estimate using PNG Property Big Data.</div>
+               </Card>
+            )}
+         </div>
+      </div>
+    </div>
+  );
+}
+
 function VaultView() {
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1314,6 +1461,7 @@ export default function App() {
             {view==="analytics"&&<AnalyticsView/>}
             {view==="notifications" && <NotificationsView />}
             {view==="vault" && <VaultView />}
+            {view==="valuation" && <ValuationView />}
             {view==="b2b"      &&<B2BView/>}
             {view==="flags"    &&<FlagsView/>}
             {view==="sources"&&<ResourcesView/>}
