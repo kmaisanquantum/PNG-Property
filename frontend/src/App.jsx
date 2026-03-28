@@ -437,6 +437,7 @@ const NAV_ITEMS = [
   {id:"listings",  icon:"≡", label:"Listings"},
   {id:"heatmap",   icon:"◉", label:"Heatmap"},
   {id:"analytics", icon:"∿", label:"Analytics"},
+  {id:"b2b",       icon:"🛰", label:"Agent Intel"},
   {id:"flags",     icon:"⚑", label:"Flagged"},
   {id:"sources", icon:"📡", label:"Sources"},
 ];
@@ -468,7 +469,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
-  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",flags:"Flagged Listings",sources:"Market Sources"};
+  const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources"};
   return (
     <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
       <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -901,6 +902,107 @@ const RESOURCES_DATA = [
   }
 ];
 
+function B2BView() {
+  const [alerts, setAlerts] = useState([]);
+  const [forecast, setForecast] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      apiFetch("/b2b/alerts"),
+      apiFetch("/b2b/forecasting"),
+      apiFetch("/b2b/leads")
+    ]).then(([a, f, l]) => {
+      setAlerts(a?.alerts || []);
+      setForecast(f?.forecast || []);
+      setLeads(l?.leads || []);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
+
+  return (
+    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+      {/* Competitor Price Alerts */}
+      <div>
+        <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:14, letterSpacing:'0.1em'}}>COMPETITOR PRICING ALERTS</div>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(350px, 1fr))', gap:14}}>
+          {alerts.map((a, i) => (
+            <Card key={i} style={{padding:18, borderLeft:`4px solid ${C.red}`}}>
+              <div style={{fontSize:12, color:C.text2, marginBottom:4}}>YOUR LISTING</div>
+              <div style={{fontSize:15, fontWeight:700, marginBottom:10}}>{a.my_listing.title} <span style={{color:C.text2}}>({fmt(a.my_listing.price)})</span></div>
+              <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                {a.competitors.map((c, j) => (
+                  <div key={j} style={{background:C.bg3, padding:10, borderRadius:8, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                    <div>
+                      <div style={{fontSize:10, color:C.text1}}>{c.source}</div>
+                      <div style={{fontSize:13, fontWeight:600, color:C.red}}>{fmt(c.price)}</div>
+                    </div>
+                    <Badge label={`-${c.pct}% UNDER`} color={C.red} small />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+          {!alerts.length && <div style={{color:C.text2, fontSize:13, background:C.bg1, padding:20, borderRadius:8, border:`1px solid ${C.border}`}}>No immediate pricing threats detected in your portfolio.</div>}
+        </div>
+      </div>
+
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:20}}>
+        {/* Demand Forecasting */}
+        <Card style={{padding:20}}>
+          <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>MARKET OPPORTUNITY (SUPPLY GAP)</div>
+          <div style={{display:'flex', flexDirection:'column', gap:12}}>
+            {forecast.slice(0, 8).map((f, i) => (
+              <div key={i} style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:14, fontWeight:700}}>{f.suburb} · {f.property_type}</div>
+                  <div style={{fontSize:11, color:C.text2}}>{f.supply} listings available vs high demand</div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                   {f.spike_pct > 0 && <div style={{fontSize:10, color:C.green, fontWeight:700, marginBottom:4}}>📈 +{f.spike_pct}% Spike</div>}
+                   <Badge label={`Opportunity: ${f.opportunity_score}%`} color={C.teal} small />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Lead Scoring */}
+        <Card style={{padding:20}}>
+          <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>HOT LEADS (PLATFORM SCORING)</div>
+          <table style={{width:'100%', borderCollapse:'collapse'}}>
+            <thead>
+              <tr style={{borderBottom:`1px solid ${C.border}`}}>
+                <th style={{padding:8, textAlign:'left', fontSize:10, color:C.text2}}>NAME</th>
+                <th style={{padding:8, textAlign:'left', fontSize:10, color:C.text2}}>SCORE</th>
+                <th style={{padding:8, textAlign:'left', fontSize:10, color:C.text2}}>ACTIVITY</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map((l, i) => (
+                <tr key={i} style={{borderBottom:`1px solid ${C.bg3}`}}>
+                  <td style={{padding:8}}>
+                    <div style={{fontSize:13, fontWeight:600}}>{l.name}</div>
+                    <div style={{fontSize:10, color:C.text2}}>Interested in {l.interest}</div>
+                  </td>
+                  <td style={{padding:8}}>
+                    <Badge label={l.score} color={l.status === 'Hot' ? C.green : C.amber} small />
+                  </td>
+                  <td style={{padding:8, fontSize:11, color:C.text2}}>{l.last_active}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 function ResourcesView() {
   return (
     <div style={{display:"flex", flexDirection:"column", gap:24}}>
@@ -980,6 +1082,7 @@ export default function App() {
             {view==="listings" &&<ListingsView/>}
             {view==="heatmap"  &&<HeatmapView/>}
             {view==="analytics"&&<AnalyticsView/>}
+            {view==="b2b"      &&<B2BView/>}
             {view==="flags"    &&<FlagsView/>}
             {view==="sources"&&<ResourcesView/>}
           </div>

@@ -69,6 +69,8 @@ scrape_jobs: dict[str, dict] = {}
 OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", "output/png_listings_latest.json"))
 
 STATIC_DIR = Path("static")
+
+# ── MARKET CONTEXT DATA ───────────────────────────────────────────────────────
 SUBURB_COORDS = {
     "Waigani":{"lat":-9.4298,"lng":147.1812},"Boroko":{"lat":-9.4453,"lng":147.1769},
     "Gerehu":{"lat":-9.4736,"lng":147.1609},"Gordons":{"lat":-9.4201,"lng":147.1739},
@@ -83,6 +85,14 @@ BENCHMARKS = {
     "Hohola":1600,"Tokarara":2275,"Koki":2900,"Badili":3325,
     "Six Mile":1450,"Eight Mile":1225,"Morata":1633,"Erima":2033,
 }
+
+# Suburb Pricing Tiers for Mock Data Generation
+TIERS = {
+    "Gordons":1,"Waigani":1,"Badili":2,"Boroko":2,"Koki":2,
+    "Tokarara":3,"Gerehu":3,"Hohola":3,"Morata":4,"Erima":4,
+    "Six Mile":4,"Eight Mile":4
+}
+BASES = [6000, 3500, 2000, 1200]
 
 def _get_db():
     mongo_url = os.getenv("MONGODB_URL","")
@@ -125,7 +135,11 @@ def _load_listings() -> list[dict]:
 
     if not raw_ls:
         if OUTPUT_FILE.exists():
-            with open(OUTPUT_FILE) as f: raw_ls = json.load(f)
+            try:
+                with open(OUTPUT_FILE) as f: raw_ls = json.load(f)
+            except Exception as e:
+                log.error(f"Failed to load {OUTPUT_FILE}: {e}")
+                raw_ls = _mock_listings()
         else:
             raw_ls = _mock_listings()
 
@@ -212,8 +226,7 @@ def _mock_listings() -> list[dict]:
     sources=["Hausples","The Professionals","Ray White PNG","Century 21 PNG","Marketmeri.com (Real Estate Section)","Facebook Marketplace","SRE PNG","DAC Properties"]
     types=["House","Apartment","Townhouse","Studio","Room","Compound"]
     no_verify={"Facebook Marketplace"}
-    TIERS={"Gordons":1,"Waigani":1,"Badili":2,"Boroko":2,"Koki":2,"Tokarara":3,"Gerehu":3,"Hohola":3,"Morata":4,"Erima":4,"Six Mile":4,"Eight Mile":4}
-    BASES=[6000,3500,2000,1200]
+
     rng=random.Random(42); now=datetime.now(timezone.utc); listings=[]
     for i in range(240):
         suburb=rng.choice(suburbs); src=rng.choice(sources); ptype=rng.choice(types)
@@ -598,6 +611,31 @@ def get_source_list(current_user: User = Depends(get_current_user)):
         "Kenmok Real Estate", "Pacific Palms Property", "Credit Corporation Properties", "Nambawan Super (Property)",
         "Edai Town", "Tuhava", "Facebook Marketplace"
     ]}
+
+# ── B2B Agent Intelligence Routes ─────────────────────────────────────────────
+
+@app.get("/api/b2b/alerts")
+def get_b2b_alerts(current_user: User = Depends(get_current_user)):
+    """Find pricing threats from competitors."""
+    from png_scraper.b2b_engine import get_competitor_alerts
+    # For demo, we'll assume the user is from "The Professionals" or "Ray White PNG"
+    # unless they are the admin, then we'll just use "The Professionals"
+    agent = "The Professionals"
+    if "ray" in (current_user.full_name or "").lower(): agent = "Ray White PNG"
+
+    return {"alerts": get_competitor_alerts(_load_listings(), agent), "agent": agent}
+
+@app.get("/api/b2b/forecasting")
+def get_b2b_forecasting(current_user: User = Depends(get_current_user)):
+    """Identify high-demand, low-supply opportunities."""
+    from png_scraper.b2b_engine import get_demand_forecast
+    return {"forecast": get_demand_forecast(_load_listings())}
+
+@app.get("/api/b2b/leads")
+def get_b2b_leads(current_user: User = Depends(get_current_user)):
+    """Identify hot leads based on platform interaction scoring."""
+    from png_scraper.b2b_engine import get_lead_scoring
+    return {"leads": get_lead_scoring()}
 
 # ── Optional: serve built React SPA from backend (single-service mode) ─────────
 # To enable: cd frontend && npm run build && cp -r dist ../backend/static
