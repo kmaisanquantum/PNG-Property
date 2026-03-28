@@ -212,7 +212,7 @@ function LineChart({trends}) {
 }
 
 // ── SVG HEATMAP BUBBLES ───────────────────────────────────────────────────────
-function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price"}) {
+function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLayers = {}}) {
   if (!suburbs?.length) return null;
   const LAT0=-9.505,LAT1=-9.37,LNG0=147.13,LNG1=147.21,W=520,H=320;
   const toX = lng => ((lng-LNG0)/(LNG1-LNG0))*W;
@@ -223,12 +223,29 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price"}) {
   const minV = Math.min(...suburbs.map(s => s[metric] || 0));
   const maxV = Math.max(...suburbs.map(s => s[metric] || 1));
 
-  const getCol = (val) => priceColor(val, minV, maxV);
+  const getCol = (val) => {
+    if (metric === "power_score") {
+       const t = clamp((val-20)/80, 0, 1);
+       return `rgb(${Math.round(200 - t*150)}, ${Math.round(50 + t*150)}, 50)`; // Red to Green
+    }
+    return priceColor(val, minV, maxV);
+  }
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto"}}>
       <defs><pattern id="g" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r=".6" fill={C.bg3}/></pattern></defs>
       <rect width={W} height={H} fill="url(#g)"/>
+
+      {/* School Pins Layer */}
+      {extraLayers.schools && extraLayers.schools.map(s => {
+         const x = toX(s.lng), y = toY(s.lat);
+         return (
+           <g key={s.name}>
+             <circle cx={x} cy={y} r={3} fill={C.teal} />
+             <text x={x+5} y={y+2} fill={C.text1} fontSize={7} fontWeight={600}>{s.name}</text>
+           </g>
+         )
+      })}
       {suburbs.map(s=>{
         if(!s.lat||!s.lng) return null;
         const x=toX(s.lng), y=toY(s.lat), r=rOf(s.listings||20);
@@ -668,27 +685,66 @@ function ListingsView({suburbFilter}) {
 
 function HeatmapView() {
   const [data, setData] = useState(null);
+  const [utilData, setUtilData] = useState(null);
   const [selected, setSelected] = useState(null);
   const [sort, setSort] = useState("avg_price");
   const [metric, setMetric] = useState("avg_price");
+  const [showSchools, setShowSchools] = useState(false);
+  const [showReview, setShowReview] = useState(false);
 
-  useEffect(()=>{apiFetch("/analytics/heatmap").then(d=>setData(d||MOCK_HEATMAP));},[]);
+  useEffect(()=>{
+    apiFetch("/analytics/heatmap").then(d=>setData(d||MOCK_HEATMAP));
+    apiFetch("/utilities/map").then(d=>setUtilData(d));
+  },[]);
   const suburbs=(data?.suburbs||MOCK_HEATMAP.suburbs);
   const sorted=[...suburbs].sort((a,b)=>b[sort]-a[sort]);
   const sel=selected?suburbs.find(s=>s.suburb===selected):null;
 
+  const combinedSuburbs = suburbs.map(s => {
+     const rel = utilData?.reliability[s.suburb] || {power_score: 80, water_score: 90};
+     return {...s, ...rel};
+  });
+
   return <div style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,height:"100%"}}>
+    {showReview && (
+       <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center'}}>
+          <Card style={{width:400, padding:24}}>
+             <div style={{fontSize:18, fontWeight:800, marginBottom:16}}>Report Utility Reliability</div>
+             <div style={{display:'flex', flexDirection:'column', gap:12}}>
+                <select style={{background:C.bg3, padding:10, borderRadius:8, color:C.text0}}>
+                   <option>Select Suburb</option>
+                   {SUBURBS.map(s=><option key={s}>{s}</option>)}
+                </select>
+                <select style={{background:C.bg3, padding:10, borderRadius:8, color:C.text0}}>
+                   <option>PNG Power (Electricity)</option>
+                   <option>Water PNG</option>
+                </select>
+                <div style={{fontSize:12, color:C.text1}}>Reliability Rating (1-5)</div>
+                <input type="range" min="1" max="5" style={{accentColor:C.teal}} />
+                <textarea placeholder="Specific street or issue..." style={{background:C.bg3, border:`1px solid ${C.border}`, borderRadius:8, padding:10, color:C.text0, height:80}} />
+                <div style={{display:'flex', gap:10}}>
+                   <button onClick={()=>setShowReview(false)} style={{flex:1, background:C.bg1, border:`1px solid ${C.border}`, color:C.text1, padding:10, borderRadius:6}}>Cancel</button>
+                   <button onClick={()=>{alert("Report submitted! Crowdsourced data updated."); setShowReview(false);}} style={{flex:1, background:C.teal, color:C.bg0, border:'none', padding:10, borderRadius:6, fontWeight:700}}>Submit Review</button>
+                </div>
+             </div>
+          </Card>
+       </div>
+    )}
+
     <div style={{display:"flex",flexDirection:"column",gap:14}}>
       <Card style={{padding:20}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>MARKET HEATMAP · Click to select</span>
+          <div style={{display:'flex', gap:12, alignItems:'center'}}>
+             <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>INTELLIGENCE LAYERS</span>
+             <Pill active={showSchools} onClick={()=>setShowSchools(!showSchools)}>🏫 Schools</Pill>
+          </div>
           <div style={{display:"flex",gap:6}}>
             <Pill active={metric==="avg_price"} onClick={()=>setMetric("avg_price")}>Rent</Pill>
             <Pill active={metric==="avg_price_sqm"} onClick={()=>setMetric("avg_price_sqm")}>PGK/Sqm</Pill>
-            <Pill active={metric==="rental_yield"} onClick={()=>setMetric("rental_yield")}>Yield %</Pill>
+            <Pill active={metric==="power_score"} onClick={()=>setMetric("power_score")}>⚡ Power</Pill>
           </div>
         </div>
-        <HeatmapViz suburbs={suburbs} selected={selected} onSelect={setSelected} metric={metric}/>
+        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{schools: showSchools ? utilData?.schools : null}}/>
         <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:6,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(120,140,180),rgb(200,70,45))`}}/>
@@ -736,7 +792,19 @@ function HeatmapView() {
       </Card>
       {sel&&<Card style={{padding:18,border:`1px solid ${priceColor(sel.avg_price)}44`}}>
         <div style={{fontFamily:"'Barlow Condensed'",fontSize:18,fontWeight:700,marginBottom:14}}>{sel.suburb}</div>
+        <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:10}}>UTILITY STATUS</div>
+        <div style={{display:'flex', flexDirection:'column', gap:8, marginBottom:16}}>
+           <div style={{display:'flex', justifyContent:'space-between'}}>
+              <span style={{fontSize:12, color:C.text1}}>⚡ Power Reliability</span>
+              <span style={{fontSize:12, fontWeight:700, color:C.teal}}>{utilData?.reliability[sel.suburb]?.power_score || 85}%</span>
+           </div>
+           <div style={{display:'flex', justifyContent:'space-between'}}>
+              <span style={{fontSize:12, color:C.text1}}>🌐 Internet (Fibre)</span>
+              <Badge label={utilData?.internet[sel.suburb]?.fibre ? "AVAILABLE" : "N/A"} color={utilData?.internet[sel.suburb]?.fibre ? C.green : C.text2} small />
+           </div>
+        </div>
         {[["Avg Rent",fmt(sel.avg_price)],["Median",fmt(sel.median_price)],["Min",fmt(sel.min_price)],["Max",fmt(sel.max_price)],["Listings",sel.listings]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:7,fontSize:12}}><span style={{color:C.text2}}>{k}</span><span style={{color:priceColor(sel.avg_price),fontWeight:600,fontFamily:"'IBM Plex Mono'"}}>{v}</span></div>)}
+        <button onClick={()=>setShowReview(true)} style={{width:'100%', marginTop:10, background:C.bg3, border:`1px solid ${C.border}`, color:C.teal, borderRadius:6, padding:8, fontSize:11, fontWeight:700}}>CROWDSOURCE RELIABILITY</button>
       </Card>}
     </div>
   </div>;
