@@ -111,6 +111,8 @@ class User(BaseModel):
     full_name: Optional[str] = None
     disabled: Optional[bool] = None
     auth_provider: str = "email" # email, google, facebook, phone, whatsapp
+    saved_searches: List[dict] = []
+    notification_prefs: dict = {"whatsapp": True, "email": False}
 
 class UserCreate(BaseModel):
     email: Optional[EmailStr] = None
@@ -387,6 +389,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
 
 async def _run_scrape(job_id:str, req:ScrapeRequest):
     from png_scraper.main import run_all, export_json
+    from png_scraper.notifier import detect_price_drops, match_saved_searches, notify_price_drop, notify_new_match
+
+    # Load old listings to detect drops
+    old_listings = []
+    if OUTPUT_FILE.exists():
+        try:
+            with open(OUTPUT_FILE) as f: old_listings = json.load(f)
+        except: pass
+
     scrape_jobs[job_id].update({
         "status": "running",
         "started_at": datetime.now(timezone.utc).isoformat(),
@@ -419,6 +430,28 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
         if listings:
             export_json(listings, OUTPUT_FILE)
             log.info(f"Scrape job {job_id} updated {OUTPUT_FILE} with {len(listings)} listings.")
+
+            # --- NOTIFICATIONS ---
+            # 1. Detect Price Drops
+            drops = detect_price_drops(old_listings, listings)
+            for drop in drops:
+                # In a real app, find users following this specific listing.
+                # Here we simulate by notifying the admin for demo purposes.
+                admin_phone = "+675 7000 0000"
+                notify_price_drop(admin_phone, drop)
+
+            # 2. Match Saved Searches
+            # Load all users from DB/Mem who have saved searches
+            all_saved = []
+            for u in users_db.values():
+                for s in u.saved_searches:
+                    all_saved.append({"user_id": u.email or u.phone, "phone": u.phone, "name": s["name"], "criteria": s["criteria"]})
+
+            matches = match_saved_searches(listings, all_saved)
+            for match in matches:
+                if match["phone"]:
+                    notify_new_match(match["phone"], match["search_name"], match["listing"])
+
         else:
             log.warning(f"Scrape job {job_id} collected 0 listings. Preserving existing {OUTPUT_FILE}.")
 
@@ -612,6 +645,41 @@ def get_source_list(current_user: User = Depends(get_current_user)):
         "Edai Town", "Tuhava", "Facebook Marketplace"
     ]}
 
+# ── Notifications & Saved Searches ───────────────────────────────────────────
+
+class FollowSearchRequest(BaseModel):
+    name: str
+    criteria: dict
+
+@app.post("/api/notifications/follow")
+def follow_search(req: FollowSearchRequest, current_user: User = Depends(get_current_user)):
+    identifier = current_user.email or current_user.phone
+    if identifier not in users_db:
+        # For simplicity in this sandbox, we create the user in the mock DB if missing
+        users_db[identifier] = UserInDB(**current_user.dict(), hashed_password=None)
+
+    users_db[identifier].saved_searches.append({
+        "name": req.name,
+        "criteria": req.criteria,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    db = _get_db()
+    if db is not None:
+        try:
+            db["users"].update_one(
+                {"$or": [{"email": current_user.email}, {"phone": current_user.phone}]},
+                {"$push": {"saved_searches": users_db[identifier].saved_searches[-1]}}
+            )
+        except: pass
+
+    return {"status": "ok", "saved_searches_count": len(users_db[identifier].saved_searches)}
+
+@app.get("/api/notifications/active")
+def get_followed_searches(current_user: User = Depends(get_current_user)):
+    user = get_user_by_identifier(current_user.email or current_user.phone)
+    return {"saved_searches": user.saved_searches if user else []}
+
 # ── B2B Agent Intelligence Routes ─────────────────────────────────────────────
 
 @app.get("/api/b2b/alerts")
@@ -633,9 +701,16 @@ def get_b2b_forecasting(current_user: User = Depends(get_current_user)):
 
 @app.get("/api/b2b/leads")
 def get_b2b_leads(current_user: User = Depends(get_current_user)):
-    """Identify hot leads based on platform interaction scoring."""
+    """Identify hot leads based on platform interaction scoring + Messenger Bot pre-screening."""
     from png_scraper.b2b_engine import get_lead_scoring
-    return {"leads": get_lead_scoring()}
+    from png_scraper.messenger_bot import get_messenger_leads_demo
+
+    platform_leads = get_lead_scoring()
+    messenger_leads = get_messenger_leads_demo()
+
+    # Combine and sort by score
+    combined = sorted(platform_leads + messenger_leads, key=lambda x: x["score"], reverse=True)
+    return {"leads": combined}
 
 # ── Optional: serve built React SPA from backend (single-service mode) ─────────
 # To enable: cd frontend && npm run build && cp -r dist ../backend/static
