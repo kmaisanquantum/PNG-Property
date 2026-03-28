@@ -894,8 +894,24 @@ function HeatmapView({ user }) {
               <Badge label={utilData?.internet[sel.suburb]?.fibre ? "AVAILABLE" : "N/A"} color={utilData?.internet[sel.suburb]?.fibre ? C.green : C.text2} small />
            </div>
         </div>
-        {[["Avg Rent",fmt(sel.avg_price)],["Median",fmt(sel.median_price)],["Min",fmt(sel.min_price)],["Max",fmt(sel.max_price)],["Listings",sel.listings]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:7,fontSize:12}}><span style={{color:C.text2}}>{k}</span><span style={{color:priceColor(sel.avg_price),fontWeight:600,fontFamily:"'IBM Plex Mono'"}}>{v}</span></div>)}
-        <button onClick={()=>setShowReview(true)} style={{width:'100%', marginTop:10, background:C.bg3, border:`1px solid ${C.border}`, color:C.teal, borderRadius:6, padding:8, fontSize:11, fontWeight:700}}>CROWDSOURCE RELIABILITY</button>
+        {[
+          ["Avg Rent", fmt(sel.avg_price)],
+          ["Sqm Price", fmt(sel.avg_rent_sqm) + "/m²"],
+          ["Rental Yield", sel.rental_yield + "%"],
+          ["Days on Market", sel.absorption_rate + "d"],
+          ["Listings", sel.listings]
+        ].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:7,fontSize:12}}><span style={{color:C.text2}}>{k}</span><span style={{color:priceColor(sel.avg_price),fontWeight:600,fontFamily:"'IBM Plex Mono'"}}>{v}</span></div>)}
+
+        {sel.speed_index_pct !== 0 && (
+          <div style={{background:`${sel.speed_index_pct > 0 ? C.green : C.red}10`, padding:8, borderRadius:6, marginTop:8, border:`1px solid ${sel.speed_index_pct > 0 ? C.green : C.red}33`}}>
+            <div style={{fontSize:10, fontWeight:700, color:sel.speed_index_pct > 0 ? C.green : C.red}}>RELATIVE PERFORMANCE</div>
+            <div style={{fontSize:11, color:C.text1}}>
+              {sel.speed_index_pct > 0 ? `Sells ${sel.speed_index_pct}% faster` : `Sells ${Math.abs(sel.speed_index_pct)}% slower`} than market average.
+            </div>
+          </div>
+        )}
+
+        <button onClick={()=>setShowReview(true)} style={{width:'100%', marginTop:12, background:C.bg3, border:`1px solid ${C.border}`, color:C.teal, borderRadius:6, padding:8, fontSize:11, fontWeight:700}}>CROWDSOURCE RELIABILITY</button>
       </Card>}
     </div>
   </div>;
