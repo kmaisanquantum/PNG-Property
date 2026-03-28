@@ -156,6 +156,18 @@ function Spinner() {
   return <div style={{width:18,height:18,border:`2px solid ${C.border}`,borderTopColor:C.teal,borderRadius:"50%",animation:"spin .7s linear infinite",flexShrink:0}} />;
 }
 
+function HealthScore({score}) {
+  const col = score > 80 ? C.green : score > 50 ? C.amber : C.red;
+  return (
+    <div style={{display:"flex", alignItems:"center", gap:6}}>
+      <div style={{width:40, height:4, background:C.bg3, borderRadius:2, overflow:"hidden"}}>
+        <div style={{width:`${score}%`, height:"100%", background:col}} />
+      </div>
+      <span style={{fontSize:10, color:col, fontWeight:700, fontFamily:"'IBM Plex Mono'"}}>{score}%</span>
+    </div>
+  );
+}
+
 function KpiCard({label, value, sub, accent, icon, delay=0, onClick}) {
   return <Card className={`fade-up ${onClick ? "kpi-card" : ""}`} onClick={onClick} style={{padding:"18px 20px",animationDelay:`${delay}ms`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -297,18 +309,27 @@ function MvBadge({mv}) {
 // ── LISTING ROW ───────────────────────────────────────────────────────────────
 function ListingRow({l}) {
   const isFlag = l.market_value?.label==="Overpriced" && l.market_value?.pct_vs_avg>40;
+  const hasDupes = !!l.group_id;
   return (
     <tr style={{borderBottom:`1px solid ${C.bg3}`,background:isFlag?"rgba(239,68,68,.04)":"transparent",transition:"background .15s"}}
       onMouseEnter={e=>e.currentTarget.style.background=isFlag?"rgba(239,68,68,.08)":C.bg2}
       onMouseLeave={e=>e.currentTarget.style.background=isFlag?"rgba(239,68,68,.04)":"transparent"}>
       <td style={{padding:"9px 12px",color:C.text1,fontSize:12}}>{l.suburb||"—"}</td>
-      <td style={{padding:"9px 12px",color:C.text0,fontSize:12,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.title}</td>
+      <td style={{padding:"9px 12px",maxWidth:180}}>
+        <div style={{color:C.text0,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.title}</div>
+        {hasDupes && <div style={{fontSize:9, color:C.amber, marginTop:2, display:'flex', alignItems:'center', gap:3}}>👯 Multiple listings detected</div>}
+      </td>
       <td style={{padding:"9px 12px"}}><span style={{fontFamily:"'IBM Plex Mono'",fontSize:12,color:C.teal,fontWeight:600}}>{fmt(l.price_monthly_k)}</span></td>
       <td style={{padding:"9px 12px"}}><MvBadge mv={l.market_value}/></td>
       <td style={{padding:"9px 12px"}}>
-        <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600}}>{l.source_site}</span>
+        <HealthScore score={l.health_score || 0} />
       </td>
-      <td style={{padding:"9px 12px"}}>{l.is_verified?<Badge label="✓ Verified" color={C.green} small/>:<Badge label="Unverified" color={C.text2} small/>}</td>
+      <td style={{padding:"9px 12px"}}>
+        <div style={{display:'flex', flexDirection:'column', gap:3}}>
+           <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600, width:'fit-content'}}>{l.source_site}</span>
+           {l.is_verified ? <Badge label="✓ Verified" color={C.green} small/> : <Badge label="Unverified" color={C.text2} small/>}
+        </div>
+      </td>
       <td style={{padding:"9px 12px",color:C.text2,fontSize:11}}>{rel(l.scraped_at)}</td>
       <td style={{padding:"9px 12px"}}>{isFlag&&<span style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}</td>
     </tr>
@@ -611,7 +632,7 @@ function ListingsView({suburbFilter}) {
       <div style={{overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead><tr style={{borderBottom:`1px solid ${C.border}`}}>
-            <TH>Suburb</TH><TH>Title</TH><TH s="price_monthly_k">Price/mo</TH><TH>Market</TH><TH>Source</TH><TH>Status</TH><TH s="scraped_at">Posted</TH><TH></TH>
+            <TH>Suburb</TH><TH>Title</TH><TH s="price_monthly_k">Price/mo</TH><TH>Market</TH><TH s="health_score">Health</TH><TH>Trust</TH><TH s="scraped_at">Posted</TH><TH></TH>
           </tr></thead>
           <tbody>{listings.map(l=><ListingRow key={l.listing_id} l={l}/>)}</tbody>
         </table>

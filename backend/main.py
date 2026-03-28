@@ -115,16 +115,44 @@ class UserInDB(User):
 users_db: dict[str, UserInDB] = {}
 
 def _load_listings() -> list[dict]:
+    raw_ls = []
     db = _get_db()
     if db is not None:
         try:
-            docs = list(db["listings"].find({},{"_id":0}).limit(2000))
-            if docs: return docs
+            raw_ls = list(db["listings"].find({},{"_id":0}).limit(2000))
         except Exception as e:
             log.warning(f"MongoDB query failed: {e}")
-    if OUTPUT_FILE.exists():
-        with open(OUTPUT_FILE) as f: return json.load(f)
-    return _mock_listings()
+
+    if not raw_ls:
+        if OUTPUT_FILE.exists():
+            with open(OUTPUT_FILE) as f: raw_ls = json.load(f)
+        else:
+            raw_ls = _mock_listings()
+
+    # Apply Deduplication & Grouping
+    from png_scraper.engine import Listing
+    from png_scraper.deduplicator import group_listings
+
+    objects = []
+    for d in raw_ls:
+        try:
+            obj = Listing(
+                listing_id=d["listing_id"], source_site=d["source_site"], title=d["title"],
+                price_raw=d["price_raw"], price_monthly_k=d.get("price_monthly_k"),
+                price_confidence=d.get("price_confidence", "medium"), location=d["location"],
+                suburb=d.get("suburb"), listing_url=d["listing_url"], is_verified=d.get("is_verified", False),
+                property_type=d.get("property_type"), bedrooms=d.get("bedrooms"), sqm=d.get("sqm"),
+                is_for_sale=d.get("is_for_sale", False), health_score=d.get("health_score", 0),
+                is_middleman=d.get("is_middleman", False), group_id=d.get("group_id"),
+                scraped_at=d.get("scraped_at", ""), first_seen_at=d.get("first_seen_at", ""),
+                raw_text=d.get("raw_text", "")
+            )
+            objects.append(obj)
+        except Exception as e:
+            log.error(f"Error hydrating listing {d.get('listing_id')}: {e}")
+
+    grouped_objects = group_listings(objects)
+    return [o.to_dict() for o in grouped_objects]
 
 def get_user_by_identifier(identifier: str) -> Optional[UserInDB]:
     # Check in-memory first
@@ -205,11 +233,19 @@ def _mock_listings() -> list[dict]:
         first_seen = scraped - timedelta(days=rng.randint(0,14))
         sqm = rng.randint(40, 400) if ptype != "Room" else rng.randint(10, 25)
 
+        is_verified = src not in no_verify
+        # Randomly verify some FB listings via the new landline registry logic
+        if src == "Facebook Marketplace" and rng.random() < 0.15:
+            is_verified = True
+
+        health = rng.randint(40, 95) if src == "Facebook Marketplace" else rng.randint(85, 100)
+
         listings.append({"listing_id":f"lst{i:04d}","source_site":src,"title":f"{beds} Bedroom {ptype} – {suburb}",
             "price_raw":price_raw,"price_monthly_k":price,"price_confidence":"high",
             "location":f"{suburb}, NCD","suburb":suburb,"listing_url":f"https://hausples.com.pg/listing/{i+1}",
-            "is_verified":src not in no_verify,"property_type":ptype,"bedrooms":beds,
-            "sqm": sqm, "is_for_sale": is_sale,
+            "is_verified":is_verified,"property_type":ptype,"bedrooms":beds,
+            "sqm": sqm, "is_for_sale": is_sale, "health_score": health,
+            "is_middleman": rng.random() < 0.2, "group_id": None,
             "scraped_at":scraped.isoformat(),"first_seen_at": first_seen.isoformat(),
             "raw_text":f"{beds} bedroom {ptype.lower()} in {suburb} {price_raw}"})
     return listings
@@ -246,15 +282,12 @@ def _suburb_stats(listings):
         n_rent = len(r_prices)
         avg_rent = int(sum(r_prices)/n_rent) if n_rent else 0
 
-        # Price per SQM
-        sqm_prices = []
-        for l in (r_items + s_items):
-            p = l.get("price_monthly_k")
-            s = l.get("sqm")
-            if p and s and s > 0:
-                sqm_prices.append(p / s)
+        # Price per SQM (Separated)
+        rent_sqm_list = [l["price_monthly_k"]/l["sqm"] for l in r_items if l.get("price_monthly_k") and l.get("sqm")]
+        sale_sqm_list = [l["price_monthly_k"]/l["sqm"] for l in s_items if l.get("price_monthly_k") and l.get("sqm")]
 
-        avg_sqm = int(sum(sqm_prices)/len(sqm_prices)) if sqm_prices else 0
+        avg_rent_sqm = int(sum(rent_sqm_list)/len(rent_sqm_list)) if rent_sqm_list else 0
+        avg_sale_sqm = int(sum(sale_sqm_list)/len(sale_sqm_list)) if sale_sqm_list else 0
 
         # Absorption Rate (Days on Market)
         doms = []
@@ -279,7 +312,12 @@ def _suburb_stats(listings):
         result.append({
             "suburb": sub,
             "avg_price": avg_rent,
-            "avg_price_sqm": avg_sqm,
+            "median_price": int(sorted(r_prices)[n_rent//2]) if n_rent else 0,
+            "min_price": min(r_prices) if n_rent else 0,
+            "max_price": max(r_prices) if n_rent else 0,
+            "avg_price_sqm": avg_sale_sqm or (avg_rent_sqm * 100), # Fallback: Cap Rate based estimate for heatmap
+            "avg_rent_sqm": avg_rent_sqm,
+            "avg_sale_sqm": avg_sale_sqm,
             "rental_yield": yield_pct,
             "absorption_rate": avg_dom, # average days on market
             "listings": n_rent + len(s_items),
