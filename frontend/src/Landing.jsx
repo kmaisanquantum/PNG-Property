@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, error, setError, loading, handleIdentify, handleAuth, authMode, setAuthMode }) => (
+const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, password, setPassword, fullName, setFullName, role, setRole, error, setError, loading, handleIdentify, handleAuth, authMode, setAuthMode }) => (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 2000,
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
@@ -72,13 +72,27 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
 
             <form onSubmit={handleAuth} style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
               {step === 'signup' && (
-                <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
-                  <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>FULL NAME</label>
-                  <input
-                    type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
-                    style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
-                  />
-                </div>
+                <>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                    <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>FULL NAME</label>
+                    <input
+                      type="text" required value={fullName} onChange={e => setFullName(e.target.value)}
+                      style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff'}}
+                    />
+                  </div>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
+                    <label style={{fontSize: '11px', color: 'var(--text2)', fontWeight: '700'}}>I AM A...</label>
+                    <select
+                      value={role} onChange={e => setRole(e.target.value)}
+                      style={{padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: '12px', color: '#fff', cursor: 'pointer'}}
+                    >
+                      <option value="buyer">Homebuyer (Free)</option>
+                      <option value="agent">Real Estate Agency (SaaS)</option>
+                      <option value="lender">Bank / Lender (Lead Gen)</option>
+                      <option value="developer">Software Developer (API)</option>
+                    </select>
+                  </div>
+                </>
               )}
 
               {(!(step === 'signup' && !identifier.includes('@'))) && (
@@ -121,6 +135,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
   const [identifier, setIdentifier] = useState(''); // email or phone
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [role, setRole] = useState('buyer');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState('identify'); // 'identify', 'login', 'signup', 'otp'
@@ -184,7 +199,8 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             email: identifier.includes('@') ? identifier : undefined,
             phone: !identifier.includes('@') ? identifier : undefined,
             password,
-            full_name: fullName
+            full_name: fullName,
+            role: role
           })
         });
 
@@ -549,6 +565,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           identifier={identifier} setIdentifier={setIdentifier}
           password={password} setPassword={setPassword}
           fullName={fullName} setFullName={setFullName}
+          role={role} setRole={setRole}
           error={error} setError={setError} loading={loading}
           handleIdentify={handleIdentify} handleAuth={handleAuth}
           authMode={authMode} setAuthMode={setAuthMode}
