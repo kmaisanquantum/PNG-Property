@@ -67,6 +67,7 @@ app.add_middleware(
 
 scrape_jobs: dict[str, dict] = {}
 OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", "output/png_listings_latest.json"))
+HISTORY_FILE = Path(os.getenv("HISTORY_FILE", "output/suburb_history.json"))
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
@@ -170,7 +171,8 @@ def _load_listings() -> list[dict]:
                 price_confidence=d.get("price_confidence", "medium"), location=d["location"],
                 suburb=d.get("suburb"), listing_url=d["listing_url"], is_verified=d.get("is_verified", False),
                 property_type=d.get("property_type"), bedrooms=d.get("bedrooms"), sqm=d.get("sqm"),
-                is_for_sale=d.get("is_for_sale", False), health_score=d.get("health_score", 0),
+                is_for_sale=d.get("is_for_sale", False), is_active=d.get("is_active", True),
+                health_score=d.get("health_score", 0),
                 is_middleman=d.get("is_middleman", False), group_id=d.get("group_id"),
                 title_status=d.get("title_status", "Unknown / TBC"),
                 legal_flags=d.get("legal_flags", []),
@@ -202,14 +204,12 @@ def get_user_by_identifier(identifier: str) -> Optional[UserInDB]:
     return None
 def create_user(user: UserCreate) -> UserInDB:
     hashed_password = get_password_hash(user.password) if user.password else None
+    # Filter out sensitive fields or those handled separately
+    user_data = user.model_dump(exclude={"password"})
     user_in_db = UserInDB(
-        email=user.email,
-        phone=user.phone,
+        **user_data,
         hashed_password=hashed_password,
-        full_name=user.full_name,
-        disabled=False,
-        role=user.role,
-        auth_provider=user.auth_provider
+        disabled=False
     )
 
     identifier = user.email or user.phone
@@ -331,13 +331,22 @@ def _suburb_stats(listings):
         avg_sale_sqm = int(sum(sale_sqm_list)/len(sale_sqm_list)) if sale_sqm_list else 0
 
         # Absorption Rate (Days on Market)
+        # For active listings, DOM = (now - first_seen)
+        # For inactive listings, DOM = (last_seen - first_seen)
         doms = []
         for l in (r_items + s_items):
             first = l.get("first_seen_at") or l.get("scraped_at")
+            last = l.get("scraped_at")
             if first:
                 try:
-                    dt = datetime.fromisoformat(first.replace('Z', '+00:00'))
-                    days = (now - dt).days
+                    f_dt = datetime.fromisoformat(first.replace('Z', '+00:00'))
+                    if l.get("is_active", True):
+                        days = (now - f_dt).days
+                    elif last:
+                        l_dt = datetime.fromisoformat(last.replace('Z', '+00:00'))
+                        days = (l_dt - f_dt).days
+                    else:
+                        days = (now - f_dt).days
                     doms.append(max(1, days))
                 except: pass
 
@@ -348,6 +357,12 @@ def _suburb_stats(listings):
         # If no sale data, use benchmark sale prices derived from rent benchmarks (Cap Rate ~8-12%)
         avg_sale = int(sum(s_prices)/len(s_prices)) if s_prices else (BENCHMARKS.get(sub, 2500) * 12 * 10)
         yield_pct = round(((avg_rent * 12) / avg_sale) * 100, 2) if avg_sale > 0 else 0
+
+        # Relative Performance Index
+        # Example: "8-Mile sell 20% faster than 9-Mile"
+        # We need a reference average DOM
+        ref_avg_dom = 45 # Benchmark PNG average
+        speed_index = round(((ref_avg_dom - avg_dom) / ref_avg_dom) * 100) if avg_dom > 0 else 0
 
         c = SUBURB_COORDS.get(sub, {"lat":-9.44, "lng":147.18})
         result.append({
@@ -361,6 +376,7 @@ def _suburb_stats(listings):
             "avg_sale_sqm": avg_sale_sqm,
             "rental_yield": yield_pct,
             "absorption_rate": avg_dom, # average days on market
+            "speed_index_pct": speed_index, # X% faster than average
             "listings": n_rent + len(s_items),
             "rent_count": n_rent,
             "sale_count": len(s_items),
@@ -370,12 +386,34 @@ def _suburb_stats(listings):
     return sorted(result, key=lambda x: -x["avg_price"])
 
 def _trends(listings):
-    top=["Waigani","Boroko","Gerehu"]; now=datetime.now(timezone.utc); rng=random.Random(99); rows=[]
-    for w in range(7,-1,-1):
-        row={"week":(now-timedelta(weeks=w)).strftime("%b %d")}
+    top = ["Waigani", "Boroko", "Gerehu"]
+    now = datetime.now(timezone.utc)
+
+    # Try to load real history first
+    if HISTORY_FILE.exists():
+        try:
+            with open(HISTORY_FILE) as f:
+                history = json.load(f)
+
+            if len(history) >= 2:
+                rows = []
+                for entry in history:
+                    row = {"week": datetime.fromisoformat(entry["timestamp"].replace('Z', '+00:00')).strftime("%b %d")}
+                    sub_data = entry.get("suburbs", {})
+                    for sub in top:
+                        row[sub] = sub_data.get(sub, {}).get("avg_price", BENCHMARKS.get(sub, 2500))
+                    rows.append(row)
+                return rows
+        except Exception as e:
+            log.warning(f"Failed to use history for trends: {e}")
+
+    # Fallback to simulated trends if history is too sparse
+    rng = random.Random(99); rows = []
+    for w in range(7, -1, -1):
+        row = {"week": (now - timedelta(weeks=w)).strftime("%b %d")}
         for sub in top:
-            all_p=[l["price_monthly_k"] for l in listings if l.get("suburb")==sub and l.get("price_monthly_k")]
-            row[sub]=int((sum(all_p)/len(all_p))*rng.uniform(0.93,1.07)) if all_p else BENCHMARKS.get(sub,2500)
+            all_p = [l["price_monthly_k"] for l in listings if l.get("suburb") == sub and l.get("price_monthly_k")]
+            row[sub] = int((sum(all_p) / len(all_p)) * rng.uniform(0.93, 1.07)) if all_p else BENCHMARKS.get(sub, 2500)
         rows.append(row)
     return rows
 
@@ -424,12 +462,14 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
     from png_scraper.main import run_all, export_json
     from png_scraper.notifier import detect_price_drops, match_saved_searches, notify_price_drop, notify_new_match
 
-    # Load old listings to detect drops
+    # Load old listings for persistence and trend analysis
     old_listings = []
     if OUTPUT_FILE.exists():
         try:
             with open(OUTPUT_FILE) as f: old_listings = json.load(f)
         except: pass
+
+    old_map = {l["listing_id"]: l for l in old_listings}
 
     scrape_jobs[job_id].update({
         "status": "running",
@@ -444,14 +484,14 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
             current_total = scrape_jobs[job_id].get("collected", 0)
             scrape_jobs[job_id].update({
                 "collected": current_total + count,
-                "progress": round(5 + (progress_pct * 0.9)),  # Scale 0-100 to 5-95
+                "progress": round(5 + (progress_pct * 0.9)),
                 "current_source": source_name
             })
 
     try:
         include_fb = req.include_facebook or any(s.lower() == "facebook" for s in req.sources)
 
-        listings = await run_all(
+        new_results = await run_all(
             include_facebook=include_fb,
             headless=req.headless,
             sources=req.sources,
@@ -459,40 +499,91 @@ async def _run_scrape(job_id:str, req:ScrapeRequest):
             on_progress=on_progress
         )
 
-        # Export to the file consumed by the dashboard only if we actually found something
-        if listings:
-            export_json(listings, OUTPUT_FILE)
-            log.info(f"Scrape job {job_id} updated {OUTPUT_FILE} with {len(listings)} listings.")
+        if new_results:
+            now_str = datetime.now(timezone.utc).isoformat()
+            merged = []
+            seen_in_this_run = set()
+
+            # Update or Add new listings
+            for l_obj in new_results:
+                l = l_obj.to_dict()
+                lid = l["listing_id"]
+                seen_in_this_run.add(lid)
+
+                if lid in old_map:
+                    # Persistence: Preserve the first time we ever saw this listing
+                    l["first_seen_at"] = old_map[lid].get("first_seen_at") or old_map[lid].get("scraped_at")
+                    l["scraped_at"] = now_str # Current "last seen"
+                    l["is_active"] = True
+                else:
+                    l["first_seen_at"] = now_str
+                    l["scraped_at"] = now_str
+                    l["is_active"] = True
+                merged.append(l)
+
+            # Keep old listings that weren't in this scrape but mark as potentially inactive
+            # Note: We only mark as inactive if they are older than 3 days without being seen
+            for lid, old_l in old_map.items():
+                if lid not in seen_in_this_run:
+                    last_seen = old_l.get("scraped_at")
+                    if last_seen:
+                        dt = datetime.fromisoformat(last_seen.replace('Z', '+00:00'))
+                        if (datetime.now(timezone.utc) - dt).days > 3:
+                            old_l["is_active"] = False
+                    merged.append(old_l)
+
+            export_json(merged, OUTPUT_FILE)
+            log.info(f"Scrape job {job_id} merged {len(merged)} listings (New: {len(new_results)}).")
+
+            # --- HISTORICAL SNAPSHOT ---
+            try:
+                stats = _suburb_stats(merged)
+                snapshot = {
+                    "timestamp": now_str,
+                    "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    "suburbs": {s["suburb"]: {"avg_price": s["avg_price"], "yield": s["rental_yield"]} for s in stats}
+                }
+                history = []
+                if HISTORY_FILE.exists():
+                    try:
+                        with open(HISTORY_FILE) as f: history = json.load(f)
+                    except: pass
+
+                # Deduplicate by date (one snapshot per day max)
+                today_str = snapshot["date"]
+                history = [h for h in history if h.get("date") != today_str]
+                history.append(snapshot)
+
+                # Keep last 12 snapshots (roughly 3 months of weekly or 12 days of daily)
+                history = history[-12:]
+                with open(HISTORY_FILE, "w") as f: json.dump(history, f, indent=2)
+            except Exception as e:
+                log.error(f"Failed to save historical snapshot: {e}")
 
             # --- NOTIFICATIONS ---
-            # 1. Detect Price Drops
-            drops = detect_price_drops(old_listings, listings)
+            drops = detect_price_drops(old_listings, [r.to_dict() for r in new_results])
             for drop in drops:
-                # In a real app, find users following this specific listing.
-                # Here we simulate by notifying the admin for demo purposes.
                 admin_phone = "+675 7000 0000"
                 notify_price_drop(admin_phone, drop)
 
-            # 2. Match Saved Searches
-            # Load all users from DB/Mem who have saved searches
             all_saved = []
             for u in users_db.values():
                 for s in u.saved_searches:
                     all_saved.append({"user_id": u.email or u.phone, "phone": u.phone, "name": s["name"], "criteria": s["criteria"]})
 
-            matches = match_saved_searches(listings, all_saved)
+            matches = match_saved_searches([r.to_dict() for r in new_results], all_saved)
             for match in matches:
                 if match["phone"]:
                     notify_new_match(match["phone"], match["search_name"], match["listing"])
 
         else:
-            log.warning(f"Scrape job {job_id} collected 0 listings. Preserving existing {OUTPUT_FILE}.")
+            log.warning(f"Scrape job {job_id} collected 0 listings.")
 
         scrape_jobs[job_id].update({
             "status": "complete",
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "progress": 100,
-            "collected": len(listings),
+            "collected": len(new_results) if new_results else 0,
             "current_source": "Finished"
         })
     except Exception as e:
@@ -679,7 +770,7 @@ def generate_api_key(current_user: User = Depends(check_role("developer"))):
     }
     identifier = current_user.email or current_user.phone
     if identifier not in users_db:
-        users_db[identifier] = UserInDB(**current_user.dict(), hashed_password=None)
+        users_db[identifier] = UserInDB(**current_user.model_dump(), hashed_password=None)
 
     users_db[identifier].api_keys.append(new_key)
 
@@ -700,12 +791,23 @@ def get_api_keys(current_user: User = Depends(check_role("developer"))):
 @app.get("/api/v1/listings/export")
 def developer_listing_export(api_key: str):
     """Simulated paid API endpoint for developers."""
-    # Validate API key (Check all users for this key)
+    # 1. Check in-memory cache first
     found_user = None
     for u in users_db.values():
         if any(k["key"] == api_key for k in u.api_keys):
             found_user = u
             break
+
+    # 2. Check Database if not found in memory
+    if not found_user:
+        db = _get_db()
+        if db is not None:
+            user_doc = db["users"].find_one({"api_keys.key": api_key})
+            if user_doc:
+                found_user = UserInDB(**user_doc)
+                # Cache it for next time
+                if found_user.email: users_db[found_user.email] = found_user
+                if found_user.phone: users_db[found_user.phone] = found_user
 
     if not found_user:
         raise HTTPException(401, "Invalid API Key. Please get one from the Developer Portal.")
@@ -796,6 +898,8 @@ def title_search(listing_id: str, current_user: User = Depends(get_current_user)
 # ── Bank-Ready Document Vault ───────────────────────────────────────────────
 
 ALLOWED_DOC_TYPES = {"ID", "Slip", "Nasfund", "Nambawan", "Offer"}
+ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png", "doc", "docx"}
+MAX_FILE_SIZE = 5 * 1024 * 1024 # 5MB
 
 @app.post("/api/vault/upload")
 async def upload_vault_document(
@@ -805,6 +909,18 @@ async def upload_vault_document(
 ):
     if doc_type not in ALLOWED_DOC_TYPES:
         raise HTTPException(400, f"Invalid document type. Allowed types: {ALLOWED_DOC_TYPES}")
+
+    # Extension validation
+    ext = file.filename.split(".")[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(400, f"Invalid file extension. Allowed: {ALLOWED_EXTENSIONS}")
+
+    # Size validation (rough check)
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(400, f"File too large. Max size: {MAX_FILE_SIZE/1024/1024}MB")
+    await file.seek(0) # Reset pointer for writing
+
     identifier = current_user.email or current_user.phone
     user = get_user_by_identifier(identifier)
     if not user: raise HTTPException(404, "User not found")
@@ -942,7 +1058,7 @@ utility_reviews: List[dict] = []
 
 @app.post("/api/utilities/review")
 def add_utility_review(review: UtilityReview, current_user: User = Depends(get_current_user)):
-    data = review.dict()
+    data = review.model_dump()
     data["user_id"] = current_user.email or current_user.phone
     data["created_at"] = datetime.now(timezone.utc).isoformat()
     utility_reviews.append(data)

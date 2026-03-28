@@ -134,6 +134,7 @@ class Listing:
     bedrooms:        Optional[int]  = None
     sqm:             Optional[float] = None
     is_for_sale:     bool = False
+    is_active:       bool = True
     health_score:    int = 0
     is_middleman:    bool = False
     title_status:    str = "Unknown / TBC"
