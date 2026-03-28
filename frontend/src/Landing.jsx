@@ -6,11 +6,19 @@ const AuthModal = ({ setShowAuth, step, setStep, identifier, setIdentifier, pass
       background: 'rgba(8,15,20,0.95)', backdropFilter: 'blur(10px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
     }} onClick={() => { setShowAuth(false); setStep('identify'); setIdentifier(''); setPassword(''); setFullName(''); setError(''); setProvider('email'); }}>
-      <div style={{
+      <div className="auth-modal-card" style={{
         background: 'var(--bg1)', border: '1px solid var(--border)',
         borderRadius: '24px', padding: '40px', maxWidth: '420px', width: '100%',
         boxShadow: '0 32px 64px rgba(0,0,0,0.5)', position: 'relative'
       }} onClick={e => e.stopPropagation()}>
+        <style>{`
+          @media (max-width: 480px) {
+            .auth-modal-card { padding: 24px 16px !important; border-radius: 16px !important; }
+            .auth-modal-card h2 { font-size: 22px !important; margin-bottom: 8px !important; }
+            .auth-modal-card p { font-size: 13px !important; margin-bottom: 24px !important; }
+            .auth-modal-card input { padding: 12px 14px !important; font-size: 14px !important; }
+          }
+        `}</style>
         <button style={{
           position: 'absolute', top: '20px', right: '20px', background: 'none',
           border: 'none', color: 'var(--text2)', cursor: 'pointer', fontSize: '20px'
@@ -244,6 +252,13 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           backdrop-filter: blur(20px);
           border-bottom: 1px solid var(--border);
         }
+        @media (max-width: 768px) {
+          nav { padding: 0 16px; }
+          .nav-logo { font-size: 18px; }
+          .nav-cta { gap: 8px; }
+          .btn-ghost { padding: 6px 12px; font-size: 12px; }
+          .btn-primary { padding: 6px 14px; font-size: 12px; }
+        }
         .nav-logo {
           display: flex; align-items: center; gap: 10px;
           font-family: var(--font-d); font-size: 22px; letter-spacing: .04em;
@@ -281,10 +296,11 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           position: relative; overflow: hidden;
         }
         @media (max-width: 1024px) {
-          .hero { grid-template-columns: 1fr; padding: 120px 24px 60px; text-align: center; }
+          .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; text-align: center; }
           .hero-left { padding: 0; display: flex; flex-direction: column; align-items: center; }
           .hero-sub { margin-left: auto; margin-right: auto; }
           .hero-actions { justify-content: center; }
+          .hero-title { font-size: 48px !important; }
         }
         .hero-bg {
           position: absolute; inset: 0; z-index: 0;
