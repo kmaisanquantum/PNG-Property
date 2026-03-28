@@ -253,6 +253,18 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
            </g>
          )
       })}
+
+      {/* Infrastructure Projects Layer */}
+      {extraLayers.projects && extraLayers.projects.map(p => {
+         const x = toX(p.lng), y = toY(p.lat);
+         return (
+           <g key={p.name}>
+             <rect x={x-10} y={y-10} width={20} height={20} rx={4} fill={`${C.amber}22`} stroke={C.amber} strokeWidth={1.5} strokeDasharray="2 2" />
+             <path d={`M ${x-4} ${y-4} L ${x+4} ${y+4} M ${x-4} ${y+4} L ${x+4} ${y-4}`} stroke={C.amber} strokeWidth={1.5} />
+             <text x={x} y={y+18} textAnchor="middle" fill={C.amber} fontSize={7} fontWeight={800} style={{textShadow:'0 1px 2px rgba(0,0,0,0.8)'}}>{p.name}</text>
+           </g>
+         )
+      })}
       {suburbs.map(s=>{
         if(!s.lat||!s.lng) return null;
         const x=toX(s.lng), y=toY(s.lat), r=rOf(s.listings||20);
@@ -622,6 +634,7 @@ function ListingsView({suburbFilter}) {
   const [type, setType] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [titleStatus, setTitleStatus] = useState("");
   const [mvFilter, setMvFilter] = useState("");
   const [sort, setSort] = useState("scraped_at");
 
@@ -633,6 +646,7 @@ function ListingsView({suburbFilter}) {
     if(type)   q.set("type",type);
     if(minPrice) q.set("min_price",minPrice);
     if(maxPrice) q.set("max_price",maxPrice);
+    if(titleStatus) q.set("title_status",titleStatus);
     const data = await apiFetch(`/listings?${q}`);
     if(data){
       let ls=data.listings||[];
@@ -725,6 +739,12 @@ function ListingsView({suburbFilter}) {
           <option value="Fair">🟡 Fair</option>
           <option value="Overpriced">🔴 Overpriced</option>
         </select>
+        <select value={titleStatus} onChange={e=>setTitleStatus(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:titleStatus?C.teal:C.text1,fontSize:12,cursor:"pointer"}}>
+          <option value="">All Title Types</option>
+          <option value="State Lease">State Lease</option>
+          <option value="Customary (ILG)">Customary (ILG)</option>
+          <option value="Freehold">Freehold</option>
+        </select>
         <input placeholder="Min K" value={minPrice} onChange={e=>setMinPrice(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text0,fontSize:12,width:80}}/>
         <input placeholder="Max K" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:C.text0,fontSize:12,width:80}}/>
         <button
@@ -773,6 +793,7 @@ function HeatmapView({ user }) {
   const [sort, setSort] = useState("avg_price");
   const [metric, setMetric] = useState("avg_price");
   const [showSchools, setShowSchools] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
   useEffect(()=>{
@@ -821,6 +842,7 @@ function HeatmapView({ user }) {
           <div style={{display:'flex', gap:12, alignItems:'center'}}>
              <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>INTELLIGENCE LAYERS</span>
              <Pill active={showSchools} onClick={()=>setShowSchools(!showSchools)}>🏫 Schools</Pill>
+             <Pill active={showProjects} onClick={()=>setShowProjects(!showProjects)}>🏗️ Projects</Pill>
           </div>
           <div style={{display:"flex",gap:6}}>
             <Pill active={metric==="avg_price"} onClick={()=>setMetric("avg_price")}>Rent</Pill>
@@ -835,7 +857,7 @@ function HeatmapView({ user }) {
             }}>🛡️ Safety</Pill>
           </div>
         </div>
-        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{schools: showSchools ? utilData?.schools : null}}/>
+        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{schools: showSchools ? utilData?.schools : null, projects: showProjects ? utilData?.projects : null}}/>
         <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:6,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(120,140,180),rgb(200,70,45))`}}/>
