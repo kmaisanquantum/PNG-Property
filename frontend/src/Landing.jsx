@@ -273,7 +273,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
           .nav-logo { font-size: 18px; }
           .nav-cta { gap: 8px; }
           .btn-ghost { padding: 6px 12px; font-size: 12px; }
-          .btn-primary { padding: 6px 14px; font-size: 12px; }
+          .btn-primary { padding: 6px 12px; font-size: 12px; }
         }
         .nav-logo {
           display: flex; align-items: center; gap: 10px;
@@ -299,34 +299,30 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         .btn-ghost:hover { border-color: var(--teal); color: var(--teal); }
         .btn-primary {
           background: linear-gradient(135deg, var(--teal), #0891b2);
-          border: none; border-radius: 8px; padding: 8px 22px;
+          border: none; border-radius: 8px; padding: 8px 20px;
           color: #fff; font-family: var(--font-b); font-size: 14px; font-weight: 600;
           cursor: pointer; transition: all .2s;
         }
 
         .hero {
-          min-height: 100vh; display: grid;
-          grid-template-columns: 1fr 1fr;
-          align-items: center; gap: 0;
-          padding: 100px 0 60px;
+          min-height: 100vh; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; text-align: center;
+          padding: 100px 24px 60px;
           position: relative; overflow: hidden;
         }
         @media (max-width: 1024px) {
-          .hero { grid-template-columns: 1fr; padding: 100px 24px 60px; text-align: center; }
-          .hero-left { padding: 0; display: flex; flex-direction: column; align-items: center; }
-          .hero-sub { margin-left: auto; margin-right: auto; }
-          .hero-actions { justify-content: center; }
           .hero-title { font-size: 48px !important; }
         }
         .hero-bg {
           position: absolute; inset: 0; z-index: 0;
           background:
-            radial-gradient(ellipse 60% 50% at 70% 40%, rgba(14,181,176,.08) 0%, transparent 70%),
+            radial-gradient(ellipse 60% 50% at 50% 40%, rgba(14,181,176,.08) 0%, transparent 70%),
             radial-gradient(ellipse 40% 40% at 20% 80%, rgba(196,116,42,.06) 0%, transparent 60%),
             radial-gradient(ellipse 30% 30% at 80% 80%, rgba(45,184,122,.05) 0%, transparent 60%);
         }
         .hero-left {
-          padding: 0 48px 0 72px; z-index:1; position:relative;
+          z-index:1; position:relative; max-width: 800px;
+          display: flex; flex-direction: column; align-items: center;
         }
         .hero-title {
           font-family: var(--font-d);
@@ -424,7 +420,7 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
         </div>
         <div className="nav-cta">
           <button className="btn-ghost" onClick={() => { setAuthMode('login'); setShowAuth(true); }}>Sign In</button>
-          <button className="btn-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>Get Access →</button>
+          <button className="btn-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>Get Access</button>
         </div>
       </nav>
 
@@ -437,16 +433,16 @@ const Landing = ({ onEnterDashboard, apiFetch }) => {
             <span className="accent">INTELLIGENCE</span><br/>
             PLATFORM
           </h1>
-          <p className="hero-sub">
+          <p className="hero-sub" style={{ margin: '22px auto 0' }}>
             Aggregated listings from Hausples, The Professionals, Ray White, Century 21 and Facebook — normalised, scored, and delivered as actionable analytics for PNG's property market.
           </p>
-          <div className="hero-actions">
+          <div className="hero-actions" style={{ justifyContent: 'center' }}>
             <button className="btn-hero-primary" onClick={() => { setAuthMode('signup'); setShowAuth(true); }}>
               <span>Enter Dashboard</span> <span>→</span>
             </button>
           </div>
         </div>
-        <div className="hero-right">
+        <div className="hero-right" style={{ display: 'none' }}>
           <div className="dashboard-preview">
             <div className="scan-line"></div>
             <div style={{padding: '20px', textAlign: 'center'}}>
