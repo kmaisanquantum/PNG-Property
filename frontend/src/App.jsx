@@ -66,7 +66,7 @@ function mockListings(n = 80) {
 }
 
 const MOCK_OVERVIEW = {total_listings:240,verified_listings:198,avg_rent_pgk:2847,median_rent_pgk:2500,middleman_flags:17,sources_active:10,suburbs_tracked:12,last_scraped:new Date().toISOString()};
-const MOCK_HEATMAP  = {suburbs:SUBURBS.map(s=>({suburb:s,avg_price:({Waigani:4470,Boroko:3150,Gerehu:1880,Gordons:5957,Hohola:1600,Tokarara:2275,Koki:2900,Badili:3325,"Six Mile":1450,"Eight Mile":1225}[s]||2000),listings:randRange(15,75),lat:({Waigani:-9.4298,Boroko:-9.4453,Gerehu:-9.4736,Gordons:-9.4201,Hohola:-9.4512,Tokarara:-9.4580,Koki:-9.4721,Badili:-9.4600,"Six Mile":-9.4150,"Eight Mile":-9.3900}[s]||-9.44),lng:({Waigani:147.1812,Boroko:147.1769,Gerehu:147.1609,Gordons:147.1739,Hohola:147.1651,Tokarara:147.1700,Koki:147.1847,Badili:147.1900,"Six Mile":147.1500,"Eight Mile":147.1420}[s]||147.18)}))};
+const MOCK_HEATMAP  = {suburbs:SUBURBS.map(s=>({suburb:s,avg_price:({Waigani:4470,Boroko:3150,Gerehu:1880,Gordons:5957,Hohola:1600,Tokarara:2275,Koki:2900,Badili:3325,"Six Mile":1450,"Eight Mile":1225}[s]||2000),listings:randRange(15,75),lat:({Waigani:-9.4171,Boroko:-9.4701,Gerehu:-9.3870,Gordons:-9.4496,Hohola:-9.4533,Tokarara:-9.4343,Koki:-9.4785,Badili:-9.4743,"Six Mile":-9.4536,"Eight Mile":-9.4001}[s]||-9.44),lng:({Waigani:147.1808,Boroko:147.1992,Gerehu:147.1681,Gordons:147.1908,Hohola:147.1754,Tokarara:147.1663,Koki:147.1697,Badili:147.1749,"Six Mile":147.2076,"Eight Mile":147.2097}[s]||147.18)}))};
 const MOCK_TRENDS   = {trends:["Jan 19","Jan 26","Feb 2","Feb 9","Feb 16","Feb 22"].map((w,i)=>({week:w,Waigani:4200+i*40+randRange(-80,80),Boroko:3000+i*25+randRange(-60,60),Gerehu:1750+i*20+randRange(-40,40)}))};
 const MOCK_SD       = {data:SUBURBS.map(s=>({suburb:s,supply:randRange(15,75),demand_score:randRange(45,90),avg_price:({Waigani:4470,Boroko:3150,Gerehu:1880,Gordons:5957,Hohola:1600,Tokarara:2275,Koki:2900,Badili:3325,"Six Mile":1450,"Eight Mile":1225}[s]||2000)}))};
 const MOCK_SOURCES  = {sources:SOURCES.map(s=>({name:s,count:randRange(10,60)}))};
@@ -221,9 +221,15 @@ function LineChart({trends}) {
 // ── SVG HEATMAP BUBBLES ───────────────────────────────────────────────────────
 function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLayers = {}}) {
   if (!suburbs?.length) return null;
-  const LAT0=-9.505,LAT1=-9.37,LNG0=147.13,LNG1=147.21,W=520,H=320;
-  const toX = lng => ((lng-LNG0)/(LNG1-LNG0))*W;
-  const toY = lat => ((lat-LAT0)/(LAT1-LAT0))*H;
+  // Precise Projection for Port Moresby - Zoom 11 Stitched Tiles (1861-1862, 1077-1078)
+  // Tile 1861/1077 NW: 147.0410, -9.2756
+  // Tile 1862/1078 SE: 147.3926, -9.6224
+  const LAT_NW = -9.275622, LAT_SE = -9.622414, LNG_NW = 147.041015, LNG_SE = 147.392578;
+  const W=520, H=320;
+
+  const toX = lng => ((lng - LNG_NW) / (LNG_SE - LNG_NW)) * W;
+  const toY = lat => ((LAT_NW - lat) / (LAT_NW - LAT_SE)) * H;
+
   const maxL = Math.max(...suburbs.map(s=>s.listings||1));
   const rOf  = l => 22+((l/maxL)**0.5)*28;
 
@@ -233,15 +239,40 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
   const getCol = (val) => {
     if (metric === "power_score") {
        const t = clamp((val-20)/80, 0, 1);
-       return `rgb(${Math.round(200 - t*150)}, ${Math.round(50 + t*150)}, 50)`; // Red to Green
+       return `rgb(${Math.round(200 - t*150)}, ${Math.round(50 + t*150)}, 50)`;
     }
     return priceColor(val, minV, maxV);
   }
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto"}}>
-      <defs><pattern id="g" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r=".6" fill={C.bg3}/></pattern></defs>
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto", borderRadius: 8, overflow: "hidden", background: C.bg1}}>
+      <defs>
+        <pattern id="g" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r=".6" fill={C.bg3}/></pattern>
+      </defs>
+      <rect width={W} height={H} fill={C.bg1}/>
       <rect width={W} height={H} fill="url(#g)"/>
+
+      {/* Map Background Layer - Stitched Tiles (CartoDB Dark Matter) */}
+      {extraLayers.map && (
+        <g style={{opacity: 0.45, filter: "grayscale(0.6) contrast(1.2)"}}>
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1077.png" x="0" y="0" width={W/2} height={H/2} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1862/1077.png" x={W/2} y="0" width={W/2} height={H/2} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1078.png" x="0" y={H/2} width={W/2} height={H/2} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1862/1078.png" x={W/2} y={H/2} width={W/2} height={H/2} />
+        </g>
+      )}
+
+      {/* Listing Pins Layer */}
+      {extraLayers.pins && extraLayers.listings && extraLayers.listings.map((l, i) => {
+        if (!l.suburb) return null;
+        const seed = l.listing_id ? l.listing_id.split("").reduce((a,b)=>a+b.charCodeAt(0), 0) : i;
+        const jitterX = ((seed % 100) / 100 - 0.5) * 0.015;
+        const jitterY = (((seed * 7) % 100) / 100 - 0.5) * 0.01;
+        const s = suburbs.find(sb => sb.suburb === l.suburb);
+        if (!s) return null;
+        const x = toX(s.lng + jitterX), y = toY(s.lat + jitterY);
+        return <circle key={i} cx={x} cy={y} r={1.5} fill={priceColor(l.price_monthly_k)} style={{opacity: 0.65}} />;
+      })}
 
       {/* School Pins Layer */}
       {extraLayers.schools && extraLayers.schools.map(s => {
@@ -265,6 +296,7 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
            </g>
          )
       })}
+
       {suburbs.map(s=>{
         if(!s.lat||!s.lng) return null;
         const x=toX(s.lng), y=toY(s.lat), r=rOf(s.listings||20);
@@ -588,7 +620,7 @@ function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
           <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",letterSpacing:"0.08em"}}>PRICE HEATMAP · PGK/MONTH</span>
           {selSuburb&&<button onClick={()=>setSelSuburb(null)} style={{background:"none",border:"none",color:C.teal,fontSize:11,cursor:"pointer"}}>Clear ✕</button>}
         </div>
-        <HeatmapViz suburbs={h} selected={selSuburb} onSelect={setSelSuburb}/>
+        <HeatmapViz suburbs={h} selected={selSuburb} onSelect={setSelSuburb} extraLayers={{map: true}}/>
         <div style={{marginTop:10,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:5,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(200,70,45))`}}/>
@@ -794,11 +826,15 @@ function HeatmapView({ user }) {
   const [metric, setMetric] = useState("avg_price");
   const [showSchools, setShowSchools] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
+  const [showMap, setShowMap] = useState(true);
+  const [showPins, setShowPins] = useState(false);
+  const [listings, setListings] = useState([]);
   const [showReview, setShowReview] = useState(false);
 
   useEffect(()=>{
     apiFetch("/analytics/heatmap").then(d=>setData(d||MOCK_HEATMAP));
     apiFetch("/utilities/map").then(d=>setUtilData(d));
+    apiFetch("/listings?limit=200").then(d=>setListings(d?.listings||[]));
   },[]);
   const suburbs=(data?.suburbs||MOCK_HEATMAP.suburbs);
   const sorted=[...suburbs].sort((a,b)=>b[sort]-a[sort]);
@@ -841,6 +877,8 @@ function HeatmapView({ user }) {
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
           <div style={{display:'flex', gap:12, alignItems:'center'}}>
              <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>INTELLIGENCE LAYERS</span>
+             <Pill active={showMap} onClick={()=>setShowMap(!showMap)}>🗺️ Map</Pill>
+             <Pill active={showPins} onClick={()=>setShowPins(!showPins)}>📍 Pins</Pill>
              <Pill active={showSchools} onClick={()=>setShowSchools(!showSchools)}>🏫 Schools</Pill>
              <Pill active={showProjects} onClick={()=>setShowProjects(!showProjects)}>🏗️ Projects</Pill>
           </div>
@@ -857,7 +895,7 @@ function HeatmapView({ user }) {
             }}>🛡️ Safety</Pill>
           </div>
         </div>
-        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{schools: showSchools ? utilData?.schools : null, projects: showProjects ? utilData?.projects : null}}/>
+        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{map: showMap, pins: showPins, listings: listings, schools: showSchools ? utilData?.schools : null, projects: showProjects ? utilData?.projects : null}}/>
         <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:6,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(120,140,180),rgb(200,70,45))`}}/>

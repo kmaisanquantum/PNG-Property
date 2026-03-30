@@ -75,12 +75,12 @@ STATIC_DIR = Path("static")
 
 # ── MARKET CONTEXT DATA ───────────────────────────────────────────────────────
 SUBURB_COORDS = {
-    "Waigani":{"lat":-9.4298,"lng":147.1812},"Boroko":{"lat":-9.4453,"lng":147.1769},
-    "Gerehu":{"lat":-9.4736,"lng":147.1609},"Gordons":{"lat":-9.4201,"lng":147.1739},
-    "Hohola":{"lat":-9.4512,"lng":147.1651},"Tokarara":{"lat":-9.4580,"lng":147.1700},
-    "Koki":{"lat":-9.4721,"lng":147.1847},"Badili":{"lat":-9.4600,"lng":147.1900},
-    "Six Mile":{"lat":-9.4150,"lng":147.1500},"Eight Mile":{"lat":-9.3900,"lng":147.1420},
-    "Morata":{"lat":-9.4680,"lng":147.1540},"Erima":{"lat":-9.4400,"lng":147.1580},
+    "Waigani":{"lat":-9.4171,"lng":147.1808},"Boroko":{"lat":-9.4701,"lng":147.1992},
+    "Gerehu":{"lat":-9.3870,"lng":147.1681},"Gordons":{"lat":-9.4496,"lng":147.1908},
+    "Hohola":{"lat":-9.4533,"lng":147.1754},"Tokarara":{"lat":-9.4343,"lng":147.1663},
+    "Koki":{"lat":-9.4785,"lng":147.1697},"Badili":{"lat":-9.4743,"lng":147.1749},
+    "Six Mile":{"lat":-9.4536,"lng":147.2076},"Eight Mile":{"lat":-9.4001,"lng":147.2097},
+    "Morata":{"lat":-9.4061,"lng":147.1884},"Erima":{"lat":-9.4356,"lng":147.1990},
 }
 
 BENCHMARKS = {
