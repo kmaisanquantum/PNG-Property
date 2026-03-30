@@ -830,12 +830,28 @@ function HeatmapView({ user }) {
   const [showPins, setShowPins] = useState(false);
   const [listings, setListings] = useState([]);
   const [showReview, setShowReview] = useState(false);
+  const [poiCategory, setPoiCategory] = useState("schools");
+  const [poiData, setPoiData] = useState([]);
+  const [poiLoading, setPoiLoading] = useState(false);
 
   useEffect(()=>{
     apiFetch("/analytics/heatmap").then(d=>setData(d||MOCK_HEATMAP));
     apiFetch("/utilities/map").then(d=>setUtilData(d));
     apiFetch("/listings?limit=200").then(d=>setListings(d?.listings||[]));
   },[]);
+
+  useEffect(() => {
+    if (showSchools) {
+      setPoiLoading(true);
+      apiFetch(`/heatmap/places?category=${poiCategory}`).then(d => {
+        if (d?.places) setPoiData(d.places);
+        setPoiLoading(false);
+      });
+    } else {
+      setPoiData([]);
+    }
+  }, [showSchools, poiCategory]);
+
   const suburbs=(data?.suburbs||MOCK_HEATMAP.suburbs);
   const sorted=[...suburbs].sort((a,b)=>b[sort]-a[sort]);
   const sel=selected?suburbs.find(s=>s.suburb===selected):null;
@@ -879,8 +895,22 @@ function HeatmapView({ user }) {
              <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>INTELLIGENCE LAYERS</span>
              <Pill active={showMap} onClick={()=>setShowMap(!showMap)}>🗺️ Map</Pill>
              <Pill active={showPins} onClick={()=>setShowPins(!showPins)}>📍 Pins</Pill>
-             <Pill active={showSchools} onClick={()=>setShowSchools(!showSchools)}>🏫 Schools</Pill>
+             <Pill active={showSchools} onClick={()=>setShowSchools(!showSchools)}>🏫 POI</Pill>
+             {showSchools && (
+               <select
+                 value={poiCategory}
+                 onChange={e => setPoiCategory(e.target.value)}
+                 style={{background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:"4px 8px", color:C.text0, fontSize:11}}
+               >
+                 <option value="schools">Schools</option>
+                 <option value="hospitals">Hospitals</option>
+                 <option value="supermarkets">Supermarkets</option>
+                 <option value="police">Police</option>
+                 <option value="banks">Banks</option>
+               </select>
+             )}
              <Pill active={showProjects} onClick={()=>setShowProjects(!showProjects)}>🏗️ Projects</Pill>
+             {poiLoading && <Spinner />}
           </div>
           <div style={{display:"flex",gap:6}}>
             <Pill active={metric==="avg_price"} onClick={()=>setMetric("avg_price")}>Rent</Pill>
@@ -895,7 +925,7 @@ function HeatmapView({ user }) {
             }}>🛡️ Safety</Pill>
           </div>
         </div>
-        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{map: showMap, pins: showPins, listings: listings, schools: showSchools ? utilData?.schools : null, projects: showProjects ? utilData?.projects : null}}/>
+        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{map: showMap, pins: showPins, listings: listings, schools: showSchools ? (poiData.length ? poiData : utilData?.schools) : null, projects: showProjects ? utilData?.projects : null}}/>
         <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:6,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(120,140,180),rgb(200,70,45))`}}/>
