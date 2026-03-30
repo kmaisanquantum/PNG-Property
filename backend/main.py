@@ -19,6 +19,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from jose import JWTError, jwt
 import bcrypt
+from png_scraper.serpapi_client import get_serpapi_places
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(message)s")
 log = logging.getLogger("api")
@@ -1066,6 +1067,25 @@ INFRASTRUCTURE_PROJECTS = [
 
 # In-memory crowdsourced utility reviews
 utility_reviews: List[dict] = []
+# Cache for SerpApi places to avoid redundant calls
+serpapi_cache: dict[str, dict] = {}
+
+@app.get("/api/heatmap/places")
+def get_heatmap_places(category: str = "schools", current_user: User = Depends(get_current_user)):
+    """Fetches POIs from SerpApi with a 24-hour cache."""
+    now = datetime.now(timezone.utc)
+    if category in serpapi_cache:
+        cached_at = serpapi_cache[category]["timestamp"]
+        if now - cached_at < timedelta(hours=24):
+            return {"category": category, "places": serpapi_cache[category]["data"], "cached": True}
+
+    places = get_serpapi_places(category)
+    if places:
+        serpapi_cache[category] = {"timestamp": now, "data": places}
+        return {"category": category, "places": places, "cached": False}
+
+    # Fallback to empty list or previously cached data if available
+    return {"category": category, "places": serpapi_cache.get(category, {}).get("data", []), "cached": True}
 
 @app.post("/api/utilities/review")
 def add_utility_review(review: UtilityReview, current_user: User = Depends(get_current_user)):
