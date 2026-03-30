@@ -176,14 +176,14 @@ function HealthScore({score}) {
 }
 
 function KpiCard({label, value, sub, accent, icon, delay=0, onClick}) {
-  return <Card className={`fade-up ${onClick ? "kpi-card" : ""}`} onClick={onClick} style={{padding:"18px 20px",animationDelay:`${delay}ms`}}>
+  return <Card className={`fade-up ${onClick ? "kpi-card" : ""}`} onClick={onClick} style={{padding:"12px 14px",animationDelay:`${delay}ms`}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
       <div>
-        <div style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono',monospace",letterSpacing:"0.1em",marginBottom:6}}>{label}</div>
-        <div style={{fontSize:28,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif",color:accent||C.text0,lineHeight:1}}>{value}</div>
-        {sub && <div style={{fontSize:11,color:C.text2,marginTop:5}}>{sub}</div>}
+        <div style={{fontSize:9,color:C.text2,fontFamily:"'IBM Plex Mono',monospace",letterSpacing:"0.08em",marginBottom:4}}>{label}</div>
+        <div style={{fontSize:22,fontWeight:800,fontFamily:"'Barlow Condensed',sans-serif",color:accent||C.text0,lineHeight:1}}>{value}</div>
+        {sub && <div style={{fontSize:10,color:C.text2,marginTop:3}}>{sub}</div>}
       </div>
-      <div style={{fontSize:20,opacity:.6}}>{icon}</div>
+      <div style={{fontSize:16,opacity:.6}}>{icon}</div>
     </div>
   </Card>;
 }
@@ -234,7 +234,7 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
   const toY = lat => latToY(lat);
 
   const maxL = Math.max(...suburbs.map(s=>s.listings||1));
-  const rOf  = l => 22+((l/maxL)**0.5)*28;
+  const rOf  = l => 14+((l/maxL)**0.5)*18;
 
   const minV = Math.min(...suburbs.map(s => s[metric] || 0));
   const maxV = Math.max(...suburbs.map(s => s[metric] || 1));
@@ -316,11 +316,11 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
         const col = getCol(val);
         const sel = selected===s.suburb;
         return <g key={s.suburb} onClick={()=>onSelect(sel?null:s.suburb)} style={{cursor:"pointer"}}>
-          <circle cx={x} cy={y} r={r*1.5} fill={`${col}10`}/>
-          {sel&&<circle cx={x} cy={y} r={r+8} fill="none" stroke={col} strokeWidth={1.5} strokeDasharray="4 3" style={{animation: "pulse 2s infinite"}}/>}
-          <circle cx={x} cy={y} r={r} fill={`${col}${selected&&!sel?"30":"CC"}`} stroke={col} strokeWidth={sel?2:1} style={{transition: "all 0.3s"}}/>
-          <text x={x} y={y-3} textAnchor="middle" fill={selected&&!sel?C.text3:C.text0} fontSize={9} fontWeight={700} fontFamily="'Barlow Condensed'">{s.suburb}</text>
-          <text x={x} y={y+9} textAnchor="middle" fill={col} fontSize={8} fontFamily="'IBM Plex Mono'">{metric.includes("yield") ? `${val}%` : metric.includes("rate") ? `${val}d` : fmt(val)}</text>
+          <circle cx={x} cy={y} r={r*1.4} fill={`${col}10`}/>
+          {sel&&<circle cx={x} cy={y} r={r+5} fill="none" stroke={col} strokeWidth={1.2} strokeDasharray="3 2" style={{animation: "pulse 2s infinite"}}/>}
+          <circle cx={x} cy={y} r={r} fill={`${col}${selected&&!sel?"30":"CC"}`} stroke={col} strokeWidth={sel?1.5:1} style={{transition: "all 0.3s"}}/>
+          <text x={x} y={y-2} textAnchor="middle" fill={selected&&!sel?C.text3:C.text0} fontSize={7.5} fontWeight={700} fontFamily="'Barlow Condensed'">{s.suburb}</text>
+          <text x={x} y={y+7} textAnchor="middle" fill={col} fontSize={6.5} fontFamily="'IBM Plex Mono'">{metric.includes("yield") ? `${val}%` : metric.includes("rate") ? `${val}d` : fmt(val)}</text>
         </g>;
       })}
       </g>
@@ -351,7 +351,7 @@ function BarChart({data, labelKey, valueKey, color=C.teal}) {
 function SupplyDemand({data, onSeeMore}) {
   if(!data?.length) return null;
   const maxS=Math.max(...data.map(d=>d.supply||0));
-  return <div style={{display:"flex",flexDirection:"column",gap:12}}>
+  return <div style={{display:"flex",flexDirection:"column",gap:10}}>
     {data.slice(0,10).map((d,i)=>{
       const ratio=(d.demand_score||50)/(Math.min(100,(d.supply/maxS)*100)||1);
       const label=ratio>1.3?"High Demand":ratio<0.7?"Oversupply":"Balanced";
@@ -399,35 +399,35 @@ function ListingRow({l, onSearchTitle}) {
     <tr style={{borderBottom:`1px solid ${C.bg3}`,background:isFlag||isLegalRisk?"rgba(239,68,68,.04)":"transparent",transition:"background .15s"}}
       onMouseEnter={e=>e.currentTarget.style.background=isFlag||isLegalRisk?"rgba(239,68,68,.08)":C.bg2}
       onMouseLeave={e=>e.currentTarget.style.background=isFlag||isLegalRisk?"rgba(239,68,68,.04)":"transparent"}>
-      <td style={{padding:"9px 12px",color:C.text1,fontSize:12}}>{l.suburb||"—"}</td>
-      <td style={{padding:"9px 12px",maxWidth:180}}>
-        <div style={{color:C.text0,fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.title}</div>
-        <div style={{display:'flex', gap:4, marginTop:4, flexWrap:'wrap'}}>
-           {hasDupes && <div style={{fontSize:8, color:C.amber, display:'flex', alignItems:'center', gap:2}}>👯 DUPE</div>}
+      <td style={{padding:"6px 10px",color:C.text1,fontSize:11}}>{l.suburb||"—"}</td>
+      <td style={{padding:"6px 10px",maxWidth:180}}>
+        <div style={{color:C.text0,fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.title}</div>
+        <div style={{display:'flex', gap:3, marginTop:2, flexWrap:'wrap'}}>
+           {hasDupes && <div style={{fontSize:7, color:C.amber, display:'flex', alignItems:'center', gap:2}}>👯 DUPE</div>}
            <Badge label={l.title_status} color={tColor} small />
-           {isLegalRisk && <Badge label="⚠️ LEGAL RISK" color={C.red} small />}
+           {isLegalRisk && <Badge label="⚠️ RISK" color={C.red} small />}
         </div>
       </td>
-      <td style={{padding:"9px 12px"}}><span style={{fontFamily:"'IBM Plex Mono'",fontSize:12,color:C.teal,fontWeight:600}}>{fmt(l.price_monthly_k)}</span></td>
-      <td style={{padding:"9px 12px"}}><MvBadge mv={l.market_value}/></td>
-      <td style={{padding:"9px 12px"}}>
+      <td style={{padding:"6px 10px"}}><span style={{fontFamily:"'IBM Plex Mono'",fontSize:11,color:C.teal,fontWeight:600}}>{fmt(l.price_monthly_k)}</span></td>
+      <td style={{padding:"6px 10px"}}><MvBadge mv={l.market_value}/></td>
+      <td style={{padding:"6px 10px"}}>
         <HealthScore score={l.health_score || 0} />
       </td>
-      <td style={{padding:"9px 12px"}}>
-        <div style={{display:'flex', flexDirection:'column', gap:3, minWidth:80}}>
-           <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:600, width:'fit-content'}}>{l.source_site}</span>
+      <td style={{padding:"6px 10px"}}>
+        <div style={{display:'flex', flexDirection:'column', gap:2, minWidth:80}}>
+           <span style={{background:l.source_site==="Facebook Marketplace"?`${C.violet}20`:`${C.teal}18`,color:l.source_site==="Facebook Marketplace"?C.violet:C.tealDim,borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:600, width:'fit-content'}}>{l.source_site}</span>
            {l.is_verified ? <Badge label="✓ Verified" color={C.green} small/> : <Badge label="Unverified" color={C.text2} small/>}
         </div>
       </td>
-      <td style={{padding:"9px 12px",color:C.text2,fontSize:11}}>{rel(l.scraped_at)}</td>
-      <td style={{padding:"9px 12px"}}>
-         <div style={{display:'flex', gap:6}}>
-            {isFlag&&<span title="Market Flag" style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>🚩</span>}
-            {isLegalRisk&&<span title="Legal Dispute/Risk" style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>⚖️</span>}
+      <td style={{padding:"6px 10px",color:C.text2,fontSize:10}}>{rel(l.scraped_at)}</td>
+      <td style={{padding:"6px 10px"}}>
+         <div style={{display:'flex', gap:4}}>
+            {isFlag&&<span title="Market Flag" style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>🚩</span>}
+            {isLegalRisk&&<span title="Legal Dispute/Risk" style={{background:"#7f1d1d",color:"#fca5a5",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>⚖️</span>}
          </div>
       </td>
-      <td style={{padding:"9px 12px"}}>
-         <button onClick={() => onSearchTitle(l.listing_id)} style={{background:'transparent', border:`1px solid ${C.teal}44`, color:C.teal, fontSize:9, fontWeight:700, borderRadius:4, padding:"4px 8px", cursor:'pointer', whiteSpace:'nowrap'}}>SEARCH TITLE</button>
+      <td style={{padding:"6px 10px"}}>
+         <button onClick={() => onSearchTitle(l.listing_id)} style={{background:'transparent', border:`1px solid ${C.teal}44`, color:C.teal, fontSize:8, fontWeight:700, borderRadius:4, padding:"3px 6px", cursor:'pointer', whiteSpace:'nowrap'}}>SEARCH</button>
       </td>
     </tr>
   );
@@ -557,18 +557,18 @@ function Sidebar({active, onNav, onLogout, user}) {
     <div className="sidebar-container" style={{
       background:C.bg1, borderRight:`1px solid ${C.border}`,
       display:"flex", flexDirection:"column", alignItems:"center",
-      padding:"16px 0", gap:4, flexShrink:0, zIndex:10
+      padding:"12px 0", gap:2, flexShrink:0, zIndex:10
     }}>
-      <div className="sidebar-logo" style={{fontFamily:"'Barlow Condensed'",fontSize:22,fontWeight:800,color:C.teal,marginBottom:20,letterSpacing:"-.02em"}}>PD</div>
-      <div className="nav-items-wrapper" style={{display:"flex", flexDirection:"column", gap:4}}>
+      <div className="sidebar-logo" style={{fontFamily:"'Barlow Condensed'",fontSize:20,fontWeight:800,color:C.teal,marginBottom:14,letterSpacing:"-.02em"}}>PD</div>
+      <div className="nav-items-wrapper" style={{display:"flex", flexDirection:"column", gap:2}}>
         {filteredNav.map(n=>(
-          <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} className="nav-btn" style={{width:44,height:44,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:10,color:active===n.id?C.teal:C.text2,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
+          <button key={n.id} onClick={()=>onNav(n.id)} title={n.label} className="nav-btn" style={{width:38,height:38,background:active===n.id?C.tealGlow:"transparent",border:`1px solid ${active===n.id?C.teal:C.bg3}`,borderRadius:8,color:active===n.id?C.teal:C.text2,fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s"}}>
             {n.icon}
           </button>
         ))}
       </div>
       <div style={{flex:1}} className="sidebar-spacer"/>
-      <button onClick={onLogout} title="Logout" className="logout-btn" style={{width:44,minHeight:44,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:10,color:C.red,fontSize:18,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:16,padding:"4px 0"}}>
+      <button onClick={onLogout} title="Logout" className="logout-btn" style={{width:38,minHeight:38,background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:8,color:C.red,fontSize:16,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginBottom:12,padding:"2px 0"}}>
         ⎋
         <span style={{fontSize:8,fontWeight:700,marginTop:2}}>LOGOUT</span>
       </button>
@@ -581,23 +581,23 @@ function Sidebar({active, onNav, onLogout, user}) {
 function Topbar({view, overview, onScrape, onLogout, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",valuation:"Property Valuation (AVM)",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources", settings: "Account Settings", lender: "Lender Portal", dev: "Developer Portal"};
   return (
-    <div className="topbar" style={{height:56,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0}}>
-      <div style={{display:"flex",alignItems:"center",gap:12}}>
-        <span className="topbar-title" style={{fontFamily:"'Barlow Condensed'",fontSize:18,fontWeight:700,color:C.text0}}>{viewLabels[view]}</span>
-        <span className="location-tag" style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
+    <div className="topbar" style={{height:48,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <span className="topbar-title" style={{fontFamily:"'Barlow Condensed'",fontSize:16,fontWeight:700,color:C.text0}}>{viewLabels[view]}</span>
+        <span className="location-tag" style={{fontSize:9,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>PORT MORESBY · NCD</span>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:14}}>
-        <div className="user-info" style={{marginRight:16, textAlign:'right'}}>
-           <div style={{fontSize:11, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
-           <div style={{fontSize:9, color:C.text2, marginBottom:4}}>{user?.email || user?.phone}</div>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div className="user-info" style={{marginRight:12, textAlign:'right'}}>
+           <div style={{fontSize:10, color:C.text0, fontWeight:600}}>{user?.full_name || 'User'}</div>
+           <div style={{fontSize:8, color:C.text2, marginBottom:2}}>{user?.email || user?.phone}</div>
            <button onClick={onLogout} style={{
              background: "none", border: "none", padding: 0, color: C.red,
-             fontSize: 10, fontWeight: 700, cursor: "pointer", textDecoration: "underline"
+             fontSize: 9, fontWeight: 700, cursor: "pointer", textDecoration: "underline"
            }}>Logout</button>
         </div>
-        {overview?.last_scraped&&<span className="updated-tag" style={{fontSize:11,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
+        {overview?.last_scraped&&<span className="updated-tag" style={{fontSize:10,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}
-        <button onClick={onScrape} className="scrape-btn" style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"7px 16px",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+        <button onClick={onScrape} className="scrape-btn" style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:6,padding:"6px 12px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
           <span className="scrape-icon">⚡</span> <span className="scrape-text">Run Scrape</span>
         </button>
       </div>
@@ -616,9 +616,9 @@ function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
   const srcData=(sources?.sources||MOCK_SOURCES.sources);
   const keys=[{label:"TOTAL LISTINGS",value:o.total_listings,icon:"🏘",accent:C.teal},{label:"AVG RENT/MONTH",value:fmt(o.avg_rent_pgk),icon:"💰",accent:C.amber},{label:"MIDDLEMAN FLAGS",value:o.middleman_flags,icon:"🚩",accent:C.red},{label:"SOURCES ACTIVE",value:o.sources_active,icon:"📡",accent:C.violet}];
 
-  return <div style={{display:"flex",flexDirection:"column",gap:18}}>
+  return <div style={{display:"flex",flexDirection:"column",gap:12}}>
     {/* KPIs */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))",gap:14}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(130px, 1fr))",gap:10}}>
       {keys.map((k,i)=>{
         let click = null;
         if(k.label === 'TOTAL LISTINGS') click = () => onNav('listings');
@@ -627,41 +627,41 @@ function DashboardView({overview, heatmap, trends, sd, sources, onNav}) {
       })}
     </div>
     {/* Map + SD */}
-    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 280px",gap:14}}>
-      <Card style={{padding:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",letterSpacing:"0.08em"}}>PRICE HEATMAP · PGK/MONTH</span>
-          {selSuburb&&<button onClick={()=>setSelSuburb(null)} style={{background:"none",border:"none",color:C.teal,fontSize:11,cursor:"pointer"}}>Clear ✕</button>}
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 280px",gap:10}}>
+      <Card style={{padding:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <span style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'",letterSpacing:"0.08em"}}>PRICE HEATMAP · PGK/MONTH</span>
+          {selSuburb&&<button onClick={()=>setSelSuburb(null)} style={{background:"none",border:"none",color:C.teal,fontSize:10,cursor:"pointer"}}>Clear ✕</button>}
         </div>
         <HeatmapViz suburbs={h} selected={selSuburb} onSelect={setSelSuburb} extraLayers={{map: true}}/>
-        <div style={{marginTop:10,display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:9,color:C.text2}}>Low</span>
-          <div style={{flex:1,height:5,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(200,70,45))`}}/>
-          <span style={{fontSize:9,color:C.text2}}>High</span>
+        <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6}}>
+          <span style={{fontSize:8,color:C.text2}}>Low</span>
+          <div style={{flex:1,height:4,borderRadius:2,background:`linear-gradient(to right,rgb(32,190,160),rgb(200,70,45))`}}/>
+          <span style={{fontSize:8,color:C.text2}}>High</span>
         </div>
       </Card>
-      <Card style={{padding:20}}>
-        <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>SUPPLY / DEMAND</div>
+      <Card style={{padding:16}}>
+        <div style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:10}}>SUPPLY / DEMAND</div>
         <SupplyDemand data={sdData} onSeeMore={() => onNav("analytics")}/>
-        <div style={{display:"flex",gap:12,marginTop:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:C.text2}}><div style={{width:16,height:3,background:C.teal,borderRadius:2}}/> Demand</div>
-          <div style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:C.text2}}><div style={{width:16,height:3,background:C.violet,borderRadius:2}}/> Supply</div>
+        <div style={{display:"flex",gap:10,marginTop:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:8,color:C.text2}}><div style={{width:14,height:3,background:C.teal,borderRadius:2}}/> Demand</div>
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:8,color:C.text2}}><div style={{width:14,height:3,background:C.violet,borderRadius:2}}/> Supply</div>
         </div>
       </Card>
     </div>
     {/* Trends + Sources */}
-    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:14}}>
-      <Card style={{padding:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>RENT TRENDS · 8 WEEKS</span>
-          <div style={{display:"flex",gap:8}}>
-            {["Waigani","Boroko","Gerehu"].map((s,i)=><div key={s} style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:C.text1}}><div style={{width:12,height:3,borderRadius:2,background:[C.teal,C.violet,C.amber][i]}}/>{s}</div>)}
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 300px",gap:10}}>
+      <Card style={{padding:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <span style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>RENT TRENDS · 8 WEEKS</span>
+          <div style={{display:"flex",gap:6}}>
+            {["Waigani","Boroko","Gerehu"].map((s,i)=><div key={s} style={{display:"flex",alignItems:"center",gap:4,fontSize:9,color:C.text1}}><div style={{width:10,height:2,borderRadius:1,background:[C.teal,C.violet,C.amber][i]}}/>{s}</div>)}
           </div>
         </div>
         <LineChart trends={t}/>
       </Card>
-      <Card style={{padding:20}}>
-        <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>LISTINGS BY SOURCE</div>
+      <Card style={{padding:16}}>
+        <div style={{fontSize:10,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:10}}>LISTINGS BY SOURCE</div>
         <BarChart data={srcData} labelKey="name" valueKey="count" color={C.teal}/>
       </Card>
     </div>
@@ -719,7 +719,7 @@ function ListingsView({suburbFilter}) {
     if (res) setShowLegalModal(res);
   };
 
-  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+  return <div style={{display:"flex",flexDirection:"column",gap:10}}>
      {showLegalModal && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center'}}>
            <Card style={{width:450, padding:24}}>
@@ -727,7 +727,7 @@ function ListingsView({suburbFilter}) {
                  <span style={{fontWeight:800, color:C.teal}}>Legal Guard: Title Verification</span>
                  <button onClick={()=>setShowLegalModal(null)} style={{background:'none', border:'none', color:C.text2, cursor:'pointer'}}>✕</button>
               </div>
-              <div style={{display:'flex', flexDirection:'column', gap:16}}>
+              <div style={{display:'flex', flexDirection:'column', gap:12}}>
                  <div style={{background:C.bg3, padding:14, borderRadius:10}}>
                     <div style={{fontSize:10, color:C.text2, marginBottom:4}}>OFFICIAL TITLE STATUS</div>
                     <div style={{fontSize:18, fontWeight:800, color:showLegalModal.registry_verified ? C.green : C.amber}}>
@@ -875,7 +875,7 @@ function HeatmapView({ user }) {
      return {...s, ...rel, ...safety};
   });
 
-  return <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:14,height:"100%"}}>
+  return <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 260px",gap:10,height:"100%"}}>
     {showReview && (
        <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:3000, display:'flex', alignItems:'center', justifyContent:'center'}}>
           <Card style={{width:400, padding:24}}>
@@ -901,9 +901,9 @@ function HeatmapView({ user }) {
        </div>
     )}
 
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      <Card style={{padding:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <Card style={{padding:16}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{display:'flex', gap:12, alignItems:'center'}}>
              <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>INTELLIGENCE LAYERS</span>
              <Pill active={showMap} onClick={()=>setShowMap(!showMap)}>🗺️ Map</Pill>
@@ -948,37 +948,37 @@ function HeatmapView({ user }) {
       {/* Grid tiles */}
       <Card style={{padding:18}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>ALL SUBURBS</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(120px,1fr))",gap:10}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8}}>
           {suburbs.map(s=>{
             const col=priceColor(s.avg_price);
             const isSel=selected===s.suburb;
-            return <div key={s.suburb} onClick={()=>setSelected(isSel?null:s.suburb)} style={{background:col,borderRadius:8,padding:"12px 10px",cursor:"pointer",border:`2px solid ${isSel?"#fff":"transparent"}`,opacity:selected&&!isSel?.55:1,transition:"all .2s"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#0f172a",fontFamily:"'Barlow Condensed'"}}>{s.suburb}</div>
-              <div style={{fontSize:17,fontWeight:800,color:"#0f172a"}}>{fmt(s.avg_price)}</div>
-              <div style={{fontSize:9,color:"#1e293b"}}>{s.listings} listings</div>
+            return <div key={s.suburb} onClick={()=>setSelected(isSel?null:s.suburb)} style={{background:col,borderRadius:6,padding:"10px 8px",cursor:"pointer",border:`1.5px solid ${isSel?"#fff":"transparent"}`,opacity:selected&&!isSel?.55:1,transition:"all .2s"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#0f172a",fontFamily:"'Barlow Condensed'"}}>{s.suburb}</div>
+              <div style={{fontSize:15,fontWeight:800,color:"#0f172a"}}>{fmt(s.avg_price)}</div>
+              <div style={{fontSize:8.5,color:"#1e293b",fontWeight:600}}>{s.listings} listings</div>
             </div>;
           })}
         </div>
       </Card>
     </div>
     {/* Sidebar */}
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
       <Card style={{padding:18}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:12}}>RANKINGS</div>
         <div style={{display:"flex",gap:6,marginBottom:12}}>
           {[["avg_price","Price"],["listings","Supply"]].map(([k,l])=><Pill key={k} active={sort===k} onClick={()=>setSort(k)}>{l}</Pill>)}
         </div>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
           {sorted.map((s,i)=>{
             const col=priceColor(s.avg_price);
             const pct=((s.avg_price-2500)/2500)*100;
-            return <div key={s.suburb} onClick={()=>setSelected(selected===s.suburb?null:s.suburb)} style={{cursor:"pointer",padding:"8px 10px",borderRadius:7,background:selected===s.suburb?C.bg3:"transparent",border:`1px solid ${selected===s.suburb?C.border:"transparent"}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                <span style={{fontSize:12,fontWeight:600,color:C.text1}}>{i+1}. {s.suburb}</span>
-                <span style={{fontSize:11,color:col,fontFamily:"'IBM Plex Mono'",fontWeight:600}}>{fmt(s.avg_price)}</span>
+            return <div key={s.suburb} onClick={()=>setSelected(selected===s.suburb?null:s.suburb)} style={{cursor:"pointer",padding:"6px 8px",borderRadius:6,background:selected===s.suburb?C.bg3:"transparent",border:`1px solid ${selected===s.suburb?C.border:"transparent"}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{fontSize:11,fontWeight:600,color:C.text1}}>{i+1}. {s.suburb}</span>
+                <span style={{fontSize:10,color:col,fontFamily:"'IBM Plex Mono'",fontWeight:600}}>{fmt(s.avg_price)}</span>
               </div>
-              <div style={{height:4,background:C.bg3,borderRadius:2,overflow:"hidden"}}>
-                <div style={{width:`${clamp((s.avg_price/7000)*100,5,100)}%`,height:"100%",background:col,borderRadius:2}}/>
+              <div style={{height:3,background:C.bg3,borderRadius:1.5,overflow:"hidden"}}>
+                <div style={{width:`${clamp((s.avg_price/7000)*100,5,100)}%`,height:"100%",background:col,borderRadius:1.5}}/>
               </div>
             </div>;
           })}
@@ -1041,9 +1041,9 @@ function AnalyticsView({ user }) {
 
   const calculatedYield = ((calc.rent * 12) / calc.price) * 100;
 
-  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+  return <div style={{display:"flex",flexDirection:"column",gap:10}}>
     {/* Investor Insights Row */}
-    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14}}>
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
       <Card style={{padding:20}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14, letterSpacing:'0.1em'}}>ESTIMATED RENTAL YIELD</div>
         <BarChart data={[...hmData].sort((a,b)=>b.rental_yield-a.rental_yield)} labelKey="suburb" valueKey="rental_yield" color={C.amber}/>
@@ -1073,7 +1073,7 @@ function AnalyticsView({ user }) {
       </Card>
     </div>
 
-    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+    <div className="dashboard-grid-row" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
       <Card style={{padding:20, position:'relative', overflow:'hidden'}}>
         <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>RENT PRICE TRENDS</div>
         <div style={{display:"flex",gap:10,marginBottom:12}}>
@@ -1099,7 +1099,7 @@ function AnalyticsView({ user }) {
 
     <Card style={{padding:20}}>
       <div style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'",marginBottom:14}}>SUPPLY / DEMAND BY SUBURB</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
         {sdData.map(d=>{
           const ratio=(d.demand_score||50)/(Math.min(100,(d.supply/maxSup)*100)||50);
           const label=ratio>1.3?"High Demand":ratio<0.7?"Oversupply":"Balanced";
@@ -1136,7 +1136,7 @@ function FlagsView() {
     });
   },[]);
 
-  return <div style={{display:"flex",flexDirection:"column",gap:14}}>
+  return <div style={{display:"flex",flexDirection:"column",gap:10}}>
     <Card style={{padding:"14px 18px",background:"rgba(239,68,68,.06)",border:`1px solid ${C.red}30`}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <span style={{fontSize:18}}>🚩</span>
@@ -1241,7 +1241,7 @@ function B2BView({ user }) {
   ];
 
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
       {/* Bot Showcase Modal */}
       {showBot && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -1304,9 +1304,9 @@ function B2BView({ user }) {
         </div>
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:20}}>
+      <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:14}}>
         {/* Demand Forecasting */}
-        <Card style={{padding:20}}>
+        <Card style={{padding:16}}>
           <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>MARKET OPPORTUNITY (SUPPLY GAP)</div>
           <div style={{display:'flex', flexDirection:'column', gap:12}}>
             {forecast.slice(0, 8).map((f, i) => (
@@ -1390,7 +1390,7 @@ function ValuationView() {
   };
 
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
       {/* Payment Modal */}
       {showPay && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.8)', zIndex:2000, display:'flex', alignItems:'center', justifyContent:'center'}}>
@@ -1409,8 +1409,8 @@ function ValuationView() {
         </div>
       )}
 
-      <div className="dashboard-grid-row" style={{display:'grid', gridTemplateColumns:'340px 1fr', gap:20}}>
-         <Card style={{padding:24, height:'fit-content'}}>
+      <div className="dashboard-grid-row" style={{display:'grid', gridTemplateColumns:'340px 1fr', gap:14}}>
+         <Card style={{padding:16, height:'fit-content'}}>
             <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>VALUE MY HOME</div>
             <div style={{display:'flex', flexDirection:'column', gap:16}}>
                <div>
@@ -1441,9 +1441,9 @@ function ValuationView() {
             </div>
          </Card>
 
-         <div style={{display:'flex', flexDirection:'column', gap:20}}>
+         <div style={{display:'flex', flexDirection:'column', gap:14}}>
             {estimate ? (
-               <Card style={{padding:24, background:`linear-gradient(135deg, ${C.bg1}, #0d1e30)`, animation:'fadeUp 0.3s ease'}}>
+               <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, #0d1e30)`, animation:'fadeUp 0.3s ease'}}>
                   <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24}}>
                      <div>
                         <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:4}}>ESTIMATED MARKET VALUE</div>
@@ -1571,7 +1571,7 @@ function VaultView({ user }) {
   const getDoc = (type) => docs.find(d => d.type === type);
 
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
        <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, #0a202d)`}}>
           <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14, letterSpacing:'0.1em'}}>MORTGAGE READINESS</div>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
@@ -1664,7 +1664,7 @@ function NotificationsView() {
   if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
 
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
        <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
           <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14, letterSpacing:'0.1em'}}>WHATSAPP PRICE DROP ALERTS</div>
           <div style={{fontSize:14, color:C.text1, lineHeight:1.5}}>
@@ -1720,7 +1720,7 @@ function LenderPortalView() {
   if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
 
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
        <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
           <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14}}>LENDER DASHBOARD (LEAD GEN)</div>
           <div style={{fontSize:15, fontWeight:700, marginBottom:8}}>Qualified Mortgage Leads</div>
@@ -1786,7 +1786,7 @@ function DeveloperPortalView() {
   if (loading) return <div style={{padding:40, textAlign:'center'}}><Spinner/></div>;
 
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
        <Card style={{padding:20, background:`linear-gradient(135deg, ${C.bg1}, ${C.bg2})`}}>
           <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:14}}>DEVELOPER PORTAL</div>
           <div style={{fontSize:15, fontWeight:700, marginBottom:8}}>Structured Data API</div>
@@ -1832,7 +1832,7 @@ function DeveloperPortalView() {
 function SettingsView({ user }) {
   const planNames = {buyer: "Free Plan", agent: "Agency Pro (K150/mo)", lender: "Lender Enterprise", developer: "Developer API Access"};
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
+    <div style={{display:'flex', flexDirection:'column', gap:14}}>
        <Card style={{padding:24}}>
           <div style={{fontSize:18, fontWeight:800, marginBottom:16}}>Subscription & Billing</div>
           <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', background:C.bg3, padding:16, borderRadius:12}}>
@@ -1865,11 +1865,11 @@ function SettingsView({ user }) {
 
 function ResourcesView() {
   return (
-    <div style={{display:"flex", flexDirection:"column", gap:24}}>
+    <div style={{display:"flex", flexDirection:"column", gap:18}}>
       {RESOURCES_DATA.map(cat => (
         <div key={cat.category}>
-          <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:"0.1em"}}>{cat.category.toUpperCase()}</div>
-          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:16}}>
+          <div style={{fontSize:10, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:12, letterSpacing:"0.08em"}}>{cat.category.toUpperCase()}</div>
+          <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:12}}>
             {cat.items.map(item => (
               <Card key={item.name} className="fade-up kpi-card" style={{padding:18}} onClick={() => window.open(item.url, "_blank")}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8}}>
