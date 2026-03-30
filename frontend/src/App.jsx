@@ -247,6 +247,14 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
     return priceColor(val, minV, maxV);
   }
 
+  const selSub = selected ? suburbs.find(s => s.suburb === selected) : null;
+  const zoomFactor = selected ? 2.5 : 1;
+  const centerX = selSub ? toX(selSub.lng) : W / 2;
+  const centerY = selSub ? toY(selSub.lat) : H / 2;
+
+  const translateX = (W / 2) - centerX * zoomFactor;
+  const translateY = (H / 2) - centerY * zoomFactor;
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto", borderRadius: 8, overflow: "hidden", background: C.bg1}}>
       <defs>
@@ -255,15 +263,16 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
       <rect width={W} height={H} fill={C.bg1}/>
       <rect width={W} height={H} fill="url(#g)"/>
 
-      {/* Map Background Layer - Stitched Tiles (CartoDB Dark Matter) */}
-      {extraLayers.map && (
-        <g style={{opacity: 0.45, filter: "grayscale(0.6) contrast(1.2)"}}>
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1860/1077.png" x="0" y="0" width={256} height={256} />
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1077.png" x={256} y="0" width={256} height={256} />
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1860/1078.png" x="0" y={256} width={256} height={256} />
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1078.png" x={256} y={256} width={256} height={256} />
-        </g>
-      )}
+      <g style={{ transition: "transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)", transform: `translate(${translateX}px, ${translateY}px) scale(${zoomFactor})`, transformOrigin: "0 0" }}>
+        {/* Map Background Layer - Stitched Tiles (CartoDB Dark Matter) */}
+        {extraLayers.map && (
+          <g style={{opacity: 0.45, filter: "grayscale(0.6) contrast(1.2)"}}>
+            <image href="https://basemaps.cartocdn.com/dark_all/11/1860/1077.png" x="0" y="0" width={256} height={256} />
+            <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1077.png" x={256} y="0" width={256} height={256} />
+            <image href="https://basemaps.cartocdn.com/dark_all/11/1860/1078.png" x="0" y={256} width={256} height={256} />
+            <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1078.png" x={256} y={256} width={256} height={256} />
+          </g>
+        )}
 
       {/* Listing Pins Layer */}
       {extraLayers.pins && extraLayers.listings && extraLayers.listings.map((l, i) => {
@@ -308,12 +317,13 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
         const sel = selected===s.suburb;
         return <g key={s.suburb} onClick={()=>onSelect(sel?null:s.suburb)} style={{cursor:"pointer"}}>
           <circle cx={x} cy={y} r={r*1.5} fill={`${col}10`}/>
-          {sel&&<circle cx={x} cy={y} r={r+8} fill="none" stroke={col} strokeWidth={1.5} strokeDasharray="4 3"/>}
-          <circle cx={x} cy={y} r={r} fill={`${col}${selected&&!sel?"30":"CC"}`} stroke={col} strokeWidth={sel?2:1}/>
+          {sel&&<circle cx={x} cy={y} r={r+8} fill="none" stroke={col} strokeWidth={1.5} strokeDasharray="4 3" style={{animation: "pulse 2s infinite"}}/>}
+          <circle cx={x} cy={y} r={r} fill={`${col}${selected&&!sel?"30":"CC"}`} stroke={col} strokeWidth={sel?2:1} style={{transition: "all 0.3s"}}/>
           <text x={x} y={y-3} textAnchor="middle" fill={selected&&!sel?C.text3:C.text0} fontSize={9} fontWeight={700} fontFamily="'Barlow Condensed'">{s.suburb}</text>
           <text x={x} y={y+9} textAnchor="middle" fill={col} fontSize={8} fontFamily="'IBM Plex Mono'">{metric.includes("yield") ? `${val}%` : metric.includes("rate") ? `${val}d` : fmt(val)}</text>
         </g>;
       })}
+      </g>
     </svg>
   );
 }
