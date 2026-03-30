@@ -221,14 +221,17 @@ function LineChart({trends}) {
 // ── SVG HEATMAP BUBBLES ───────────────────────────────────────────────────────
 function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLayers = {}}) {
   if (!suburbs?.length) return null;
-  // Precise Projection for Port Moresby - Zoom 11 Stitched Tiles (1861-1862, 1077-1078)
-  // Tile 1861/1077 NW: 147.0410, -9.2756
-  // Tile 1862/1078 SE: 147.3926, -9.6224
-  const LAT_NW = -9.275622, LAT_SE = -9.622414, LNG_NW = 147.041015, LNG_SE = 147.392578;
-  const W=520, H=320;
+  // Web Mercator Projection for Port Moresby - Zoom 11 Stitched Tiles (1860-1861, 1077-1078)
+  // Each tile is 256px. Total W=512, H=512.
+  const W = 512, H = 512;
+  const ZOOM = 11;
+  const TILE_X_MIN = 1860, TILE_Y_MIN = 1077;
 
-  const toX = lng => ((lng - LNG_NW) / (LNG_SE - LNG_NW)) * W;
-  const toY = lat => ((LAT_NW - lat) / (LAT_NW - LAT_SE)) * H;
+  const lngToX = lng => (lng + 180) / 360 * Math.pow(2, ZOOM) * 256 - TILE_X_MIN * 256;
+  const latToY = lat => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, ZOOM) * 256 - TILE_Y_MIN * 256;
+
+  const toX = lng => lngToX(lng);
+  const toY = lat => latToY(lat);
 
   const maxL = Math.max(...suburbs.map(s=>s.listings||1));
   const rOf  = l => 22+((l/maxL)**0.5)*28;
@@ -255,10 +258,10 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
       {/* Map Background Layer - Stitched Tiles (CartoDB Dark Matter) */}
       {extraLayers.map && (
         <g style={{opacity: 0.45, filter: "grayscale(0.6) contrast(1.2)"}}>
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1077.png" x="0" y="0" width={W/2} height={H/2} />
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1862/1077.png" x={W/2} y="0" width={W/2} height={H/2} />
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1078.png" x="0" y={H/2} width={W/2} height={H/2} />
-          <image href="https://basemaps.cartocdn.com/dark_all/11/1862/1078.png" x={W/2} y={H/2} width={W/2} height={H/2} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1860/1077.png" x="0" y="0" width={256} height={256} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1077.png" x={256} y="0" width={256} height={256} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1860/1078.png" x="0" y={256} width={256} height={256} />
+          <image href="https://basemaps.cartocdn.com/dark_all/11/1861/1078.png" x={256} y={256} width={256} height={256} />
         </g>
       )}
 
@@ -274,8 +277,8 @@ function HeatmapViz({suburbs, selected, onSelect, metric = "avg_price", extraLay
         return <circle key={i} cx={x} cy={y} r={1.5} fill={priceColor(l.price_monthly_k)} style={{opacity: 0.65}} />;
       })}
 
-      {/* School Pins Layer */}
-      {extraLayers.schools && extraLayers.schools.map(s => {
+      {/* POI Pins Layer */}
+      {extraLayers.poi && extraLayers.poi.map(s => {
          const x = toX(s.lng), y = toY(s.lat);
          return (
            <g key={s.name}>
@@ -824,7 +827,7 @@ function HeatmapView({ user }) {
   const [selected, setSelected] = useState(null);
   const [sort, setSort] = useState("avg_price");
   const [metric, setMetric] = useState("avg_price");
-  const [showSchools, setShowSchools] = useState(false);
+  const [showPOI, setShowPOI] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [showMap, setShowMap] = useState(true);
   const [showPins, setShowPins] = useState(false);
@@ -841,7 +844,7 @@ function HeatmapView({ user }) {
   },[]);
 
   useEffect(() => {
-    if (showSchools) {
+    if (showPOI) {
       setPoiLoading(true);
       apiFetch(`/heatmap/places?category=${poiCategory}`).then(d => {
         if (d?.places) setPoiData(d.places);
@@ -850,7 +853,7 @@ function HeatmapView({ user }) {
     } else {
       setPoiData([]);
     }
-  }, [showSchools, poiCategory]);
+  }, [showPOI, poiCategory]);
 
   const suburbs=(data?.suburbs||MOCK_HEATMAP.suburbs);
   const sorted=[...suburbs].sort((a,b)=>b[sort]-a[sort]);
@@ -895,8 +898,8 @@ function HeatmapView({ user }) {
              <span style={{fontSize:11,color:C.text2,fontFamily:"'IBM Plex Mono'"}}>INTELLIGENCE LAYERS</span>
              <Pill active={showMap} onClick={()=>setShowMap(!showMap)}>🗺️ Map</Pill>
              <Pill active={showPins} onClick={()=>setShowPins(!showPins)}>📍 Pins</Pill>
-             <Pill active={showSchools} onClick={()=>setShowSchools(!showSchools)}>🏫 POI</Pill>
-             {showSchools && (
+             <Pill active={showPOI} onClick={()=>setShowPOI(!showPOI)}>🏫 POI</Pill>
+             {showPOI && (
                <select
                  value={poiCategory}
                  onChange={e => setPoiCategory(e.target.value)}
@@ -925,7 +928,7 @@ function HeatmapView({ user }) {
             }}>🛡️ Safety</Pill>
           </div>
         </div>
-        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{map: showMap, pins: showPins, listings: listings, schools: showSchools ? (poiData.length ? poiData : utilData?.schools) : null, projects: showProjects ? utilData?.projects : null}}/>
+        <HeatmapViz suburbs={combinedSuburbs} selected={selected} onSelect={setSelected} metric={metric} extraLayers={{map: showMap, pins: showPins, listings: listings, poi: showPOI ? (poiData.length ? poiData : utilData?.schools) : null, projects: showProjects ? utilData?.projects : null}}/>
         <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:9,color:C.text2}}>Low</span>
           <div style={{flex:1,height:6,borderRadius:3,background:`linear-gradient(to right,rgb(32,190,160),rgb(120,140,180),rgb(200,70,45))`}}/>
