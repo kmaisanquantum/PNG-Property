@@ -45,8 +45,8 @@ def test_heatmap_places_endpoint_caching():
     from main import get_current_user
     app.dependency_overrides[get_current_user] = lambda: MagicMock(email="test@test.com", role="admin")
 
-    # Patch the function in its source module
-    with patch("png_scraper.serpapi_client.get_serpapi_places") as mock_fetch:
+    # Patch the function in the main module where it is imported
+    with patch("main.get_serpapi_places") as mock_fetch:
         mock_fetch.return_value = [{"name": "Cached Place", "lat": -9.4, "lng": 147.1}]
 
         # First request
