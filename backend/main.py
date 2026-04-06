@@ -161,9 +161,9 @@ def _load_listings() -> list[dict]:
                 with open(OUTPUT_FILE) as f: raw_ls = json.load(f)
             except Exception as e:
                 log.error(f"Failed to load {OUTPUT_FILE}: {e}")
-                raw_ls = _mock_listings()
+                raw_ls = []
         else:
-            raw_ls = _mock_listings()
+            raw_ls = []
 
     # Apply Deduplication & Grouping
     from png_scraper.engine import Listing
