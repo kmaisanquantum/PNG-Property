@@ -611,6 +611,15 @@ def root_redirect():
 @app.get("/api/")
 def health(): return {"service":"PNG Property Intelligence Dashboard API","version":"1.0.0","status":"ok"}
 
+@app.get("/api/config/status")
+def get_config_status():
+    fb_email = os.getenv("FB_EMAIL", "")
+    fb_password = os.getenv("FB_PASSWORD", "")
+    return {
+        "facebook_configured": bool(fb_email and fb_password),
+        "mongodb_configured": bool(os.getenv("MONGODB_URL", "")),
+    }
+
 @app.post("/api/auth/signup", response_model=User)
 def signup(user: UserCreate):
     identifier = user.email or user.phone

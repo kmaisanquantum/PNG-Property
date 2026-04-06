@@ -435,6 +435,12 @@ function ListingRow({l, onSearchTitle}) {
 
 // ── SCRAPE CONTROL PANEL ──────────────────────────────────────────────────────
 function ScrapePanel({onClose, onRefresh}) {
+  const [config, setConfig] = useState({ facebook_configured: true });
+
+  useEffect(() => {
+    apiFetch("/config/status").then(d => { if(d) setConfig(d); });
+  }, []);
+
   const [sources, setSources] = useState(["hausples","professionals","agencies"]);
   const [pages, setPages] = useState(3);
   const [includeFb, setIncludeFb] = useState(false);
@@ -500,10 +506,12 @@ function ScrapePanel({onClose, onRefresh}) {
               {[1,2,3,5,10].map(n=><Pill key={n} active={pages===n} onClick={()=>setPages(n)}>{n}</Pill>)}
             </div>
           </div>
-          <div style={{background:C.bg3,borderRadius:8,padding:"10px 14px",marginBottom:22,fontSize:12,color:C.text1}}>
-            ⚠️ Facebook scraping requires <code style={{color:C.teal}}>FB_EMAIL</code> and <code style={{color:C.teal}}>FB_PASSWORD</code> in Render environment variables.
-            For 2FA, generate a <code style={{color:C.teal}}>fb_session.json</code> locally and upload it to the <code style={{color:C.teal}}>/app/data</code> persistent disk.
-          </div>
+          {!config.facebook_configured && (
+            <div style={{background:C.bg3,borderRadius:8,padding:"10px 14px",marginBottom:22,fontSize:12,color:C.text1}}>
+              ⚠️ Facebook scraping requires <code style={{color:C.teal}}>FB_EMAIL</code> and <code style={{color:C.teal}}>FB_PASSWORD</code> in Render environment variables.
+              For 2FA, generate a <code style={{color:C.teal}}>fb_session.json</code> locally and upload it to the <code style={{color:C.teal}}>/app/data</code> persistent disk.
+            </div>
+          )}
           <button onClick={trigger} disabled={sources.length===0} style={{width:"100%",background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:8,padding:"12px",color:"#fff",fontSize:14,fontWeight:700,cursor:sources.length?"pointer":"not-allowed",opacity:sources.length?1:.5}}>
             Start Scraping {sources.length} source{sources.length!==1?"s":""}
           </button>
