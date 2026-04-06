@@ -1,0 +1,30 @@
+listing_id,source_site,title,price_raw,price_monthly_k,price_confidence,location,suburb,listing_url,is_verified,scraped_at,first_seen_at,property_type,bedrooms,sqm,is_for_sale,is_active,health_score,is_middleman,title_status,legal_flags,group_id,raw_text
+5a090df4d497f6d1a59d38b97c4cae49,Hausples,"Apartment
+K4,500 per week","K4,500 per week",19500,high,"Portlock Road Sec 15, Lot 4,, Town, Port Moresby, NCD",Port Moresby,https://www.hausples.com.pg/rent/town/portlock-road-sec-15-lot-4-30898/,True,2026-04-06T23:02:55.588679+00:00,2026-04-06T23:02:55.588695+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,"FEATURED
+FOR RENT"
+8888da0f1c79a90acc09e55c8fc221b2,Hausples,"Apartment
+K4,000 per week","K4,000 per week",17333,high,"Ela Vista Sec 24, Lot 33-38 Granville, Town, Port Moresby, NCD",Port Moresby,https://www.hausples.com.pg/rent/town/ela-vista-sec-24-lot-33-38-granville-30453/,True,2026-04-06T23:02:55.666856+00:00,2026-04-06T23:02:55.666874+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,"FEATURED
+FOR RENT"
+efdbc19ca2329eb3615346dbd46f0e94,Hausples,"Apartment
+K1,500 per week","K1,500 per week",6500,high,"Other, Lae, Morobe",Lae,https://www.hausples.com.pg/rent/other/ponciana-31943/,True,2026-04-06T23:02:55.944255+00:00,2026-04-06T23:02:55.944271+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,"FOR RENT
+READY TO MOVE IN"
+1cf8442b86c6beca67647fa79f4ba43f,Hausples,"Apartment
+K2,538 per week","K2,538 per week",10998,high,"Other, Lae, Morobe",Lae,https://www.hausples.com.pg/rent/other/ponciana-31942/,True,2026-04-06T23:02:56.069066+00:00,2026-04-06T23:02:56.069083+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,"FOR RENT
+READY TO MOVE IN"
+f05ce15d0c9cbcdb4fe8aa1b313cc8ae,Hausples,"Apartment
+K2,000 per week","K2,000 per week",8667,high,"Section 406 Lot 19, Apartment 202, Hohola , Hohola, Port Moresby, NCD",Hohola,https://www.hausples.com.pg/rent/hohola/section-406-lot-19-apartment-202-hohola-31939/,True,2026-04-06T23:02:56.143290+00:00,2026-04-06T23:02:56.143306+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,FOR RENT
+2b483318992e80b9366b576f2124b919,Hausples,"Apartment
+K1,300 per week","K1,300 per week",5633,high,"Igua , Boroko East, Port Moresby, NCD",Boroko,https://www.hausples.com.pg/rent/boroko-east/igua-31938/,True,2026-04-06T23:02:56.219652+00:00,2026-04-06T23:02:56.219668+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,"FOR RENT
+READY TO MOVE IN"
+2f4f3640edb07b8b2d41494306df43e6,Hausples,"Apartment
+K1,700 per week","K1,700 per week",7367,high,"Crescent Vanama, Town, Port Moresby, NCD",Port Moresby,https://www.hausples.com.pg/rent/town/crescent-vanama-31929/,True,2026-04-06T23:02:56.293760+00:00,2026-04-06T23:02:56.293777+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,"FOR RENT
+READY TO MOVE IN"
+9529abc899b7208bf154f91f8a3e4baa,Hausples,"Block Of Units
+K1,300 per week","K1,300 per week",5633,high,"Korobosea, Port Moresby, NCD",Port Moresby,https://www.hausples.com.pg/rent/korobosea/2-bed-1-bath-block-of-units-31923/,True,2026-04-06T23:02:56.372074+00:00,2026-04-06T23:02:56.372092+00:00,Land,,,False,True,55,False,Unknown / TBC,[],,"FOR RENT
+READY TO MOVE IN"
+48c6d274d949f741e600a3041d744098,Hausples,"Apartment
+K3,000 per week","K3,000 per week",13000,high,"Airvos Avenue, Town, Port Moresby, NCD",Port Moresby,https://www.hausples.com.pg/rent/town/airvos-avenue-31054/,True,2026-04-06T23:02:56.446046+00:00,2026-04-06T23:02:56.446063+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,FOR RENT
+b1a17feff31920ab8e9c19f693852dd1,Hausples,"Apartment
+K3,500 per week","K3,500 per week",15167,high,"Matigoro Dr 27, 2 Mile, Port Moresby, NCD",Port Moresby,https://www.hausples.com.pg/rent/2-mile/matigoro-dr-27-31918/,True,2026-04-06T23:02:56.517237+00:00,2026-04-06T23:02:56.517253+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,FOR RENT
+76847f8a4d95b024a77aa963de597c27,Hausples,"Apartment
+K3,000 per week","K3,000 per week",13000,high,"Tanatana 26, Boroko, Port Moresby, NCD",Boroko,https://www.hausples.com.pg/rent/boroko/tanatana-26-31917/,True,2026-04-06T23:02:56.588878+00:00,2026-04-06T23:02:56.588895+00:00,Apartment,,,False,True,55,False,Unknown / TBC,[],,FOR RENT

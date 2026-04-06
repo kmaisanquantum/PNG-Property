@@ -37,6 +37,7 @@ DEFAULT_SOURCE   = "Hausples"
 # ── selector groups (try in order until one matches) ─────────────────────────
 
 CARD_SELECTORS = [
+    "article",
     "article.property-card",
     "div[data-testid='property-card']",
     ".property-card",
@@ -45,6 +46,7 @@ CARD_SELECTORS = [
 ]
 
 TITLE_SELECTORS = [
+    ".copy-wrapper .heading",
     "h2.property-card__title",
     "h2[class*='title']",
     "h3[class*='title']",
@@ -55,6 +57,8 @@ TITLE_SELECTORS = [
 ]
 
 PRICE_SELECTORS = [
+    ".price .value",
+    ".price",
     ".property-card__price",
     "[class*='price']",
     "[data-testid='property-price']",
@@ -63,6 +67,7 @@ PRICE_SELECTORS = [
 ]
 
 LOCATION_SELECTORS = [
+    ".address",
     ".property-card__location",
     "[class*='location']",
     "[class*='suburb']",
@@ -72,15 +77,18 @@ LOCATION_SELECTORS = [
 ]
 
 LINK_SELECTORS = [
+    "a.carousel-wrap",
     "a.property-card__link",
     "a[href*='/property/']",
     "a[href*='/listing/']",
+    "a[href*='/rent/']",
     "a[class*='card']",
     "a",
 ]
 
 NEXT_PAGE_SELECTORS = [
     "a[rel='next']",
+    "a.next",
     "a[aria-label='Next page']",
     "button[aria-label='Next']",
     ".pagination-next",
@@ -151,8 +159,16 @@ class HausplesScraper(PNGScraper):
         # Pull any additional text for suburb / bedroom detection
         raw_text = await _first_text(card, ["*"])   # full card text
 
+        # If title is still missing (often the case with current Hausples structure)
+        # try to infer it from the URL or first bold text
         if not title:
-            title = f"Property — {location}" if location else f"{self.SOURCE_SITE} Listing"
+            # e.g. /rent/town/portlock-road-30898/ -> "Portlock Road 30898"
+            slug = href.strip("/").split("/")[-1]
+            title = slug.replace("-", " ").title() if slug else f"{self.SOURCE_SITE} Listing"
+
+        # The location often contains a pin icon (), let's clean it
+        if location:
+            location = location.replace("", "").strip()
 
         return make_listing(
             source_site = self.SOURCE_SITE,
@@ -191,7 +207,7 @@ class HausplesScraper(PNGScraper):
             cards = []
             for sel in CARD_SELECTORS:
                 try:
-                    await page.wait_for_selector(sel, timeout=8_000)
+                    await page.wait_for_selector(sel, timeout=12_000)
                     cards = await page.query_selector_all(sel)
                     if cards:
                         log.info(f"[{self.SOURCE_SITE}] Selector '{sel}' matched {len(cards)} cards")
@@ -208,6 +224,10 @@ class HausplesScraper(PNGScraper):
                 try:
                     listing = await self._parse_card(card)
                     if listing and listing.listing_id not in seen_ids:
+                        # Skip "New Developments" or Ads that don't look like listings
+                        if "/new-developments/" in listing.listing_url:
+                            continue
+
                         seen_ids.add(listing.listing_id)
                         results.append(listing)
                         new_count += 1
@@ -223,7 +243,7 @@ class HausplesScraper(PNGScraper):
             for sel in NEXT_PAGE_SELECTORS:
                 try:
                     btn = page.locator(sel).first
-                    if await btn.is_visible(timeout=2_000):
+                    if await btn.is_visible(timeout=3_000):
                         has_next = True
                         break
                 except Exception:
