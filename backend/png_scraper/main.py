@@ -145,7 +145,15 @@ async def run_all(
     instance_tasks: list[tuple[str, Any]] = []
 
     def _want(name: str) -> bool:
-        return sources is None or name.lower() in [s.lower() for s in sources]
+        if sources is None: return True
+        low_sources = [s.lower() for s in sources]
+        if name.lower() in low_sources: return True
+
+        # Category handling
+        portals = ["hausples", "png real estate", "png buy n rent", "professionals"]
+        if "portals" in low_sources and name.lower() in portals: return True
+        if "agencies" in low_sources and name.lower() not in portals and name.lower() != "facebook": return True
+        return False
 
     # ── portals ────────────────────────────────────────────────────────────
     if _want("hausples"):

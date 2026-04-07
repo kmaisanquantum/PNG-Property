@@ -304,14 +304,18 @@ def _market_score(price:int, suburb:str, first_seen_at:str=None)->dict:
     pct = round(((price - avg) / avg) * 100, 1)
 
     # Compute investment score
-    sub_coords = SUBURB_COORDS.get(suburb, {"lat": -9.44, "lng": 147.18})
-    inv_score, inv_flags = calculate_investment_score(
-        price,
-        avg,
-        sub_coords["lat"],
-        sub_coords["lng"],
-        first_seen_at or datetime.now(timezone.utc).isoformat()
-    )
+    try:
+        sub_coords = SUBURB_COORDS.get(suburb, {"lat": -9.44, "lng": 147.18})
+        inv_score, inv_flags = calculate_investment_score(
+            price,
+            avg,
+            sub_coords["lat"],
+            sub_coords["lng"],
+            first_seen_at or datetime.now(timezone.utc).isoformat()
+        )
+    except Exception as e:
+        log.error(f"Investment scoring failed: {e}")
+        inv_score, inv_flags = 0.0, []
 
     result = {
         "pct_vs_avg": pct,
