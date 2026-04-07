@@ -804,6 +804,22 @@ def get_scrape_status(job_id:str, current_user: User = Depends(get_current_user)
     if not job: raise HTTPException(404,f"Job '{job_id}' not found")
     return job
 
+@app.post("/api/scrape/clear")
+def clear_scrape_data(current_user: User = Depends(get_current_user)):
+    """Clears all listing and history data files to allow for a clean scrape."""
+    try:
+        if OUTPUT_FILE.exists(): OUTPUT_FILE.unlink()
+        if HISTORY_FILE.exists(): HISTORY_FILE.unlink()
+        _listings_cache["timestamp"] = 0
+        _listings_cache["data"] = []
+        # Also clear MongoDB if connected
+        db = _get_db()
+        if db is not None:
+            db["listings"].delete_many({})
+        return {"status": "ok", "message": "Data cleared successfully"}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to clear data: {e}")
+
 @app.get("/api/scrape/jobs")
 def list_jobs(current_user: User = Depends(get_current_user)): return {"jobs":sorted(scrape_jobs.values(),key=lambda x:x.get("queued_at",""),reverse=True)[:20]}
 
