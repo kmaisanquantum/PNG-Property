@@ -605,6 +605,14 @@ function Topbar({view, overview, onScrape, onLogout, loading, user}) {
         </div>
         {overview?.last_scraped&&<span className="updated-tag" style={{fontSize:10,color:C.text2}}>Updated {rel(overview.last_scraped)}</span>}
         {loading&&<Spinner/>}
+        <button onClick={async () => {
+          if (window.confirm("Clear all existing listing and analytics data? This cannot be undone.")) {
+            const res = await apiFetch("/scrape/clear", { method: "POST" });
+            if (res) onLogout();
+          }
+        }} className="clear-btn" style={{background:C.bg3, border:`1px solid ${C.red}`, borderRadius:6, padding:"6px 12px", color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5}}>
+          <span style={{fontSize:12}}>🗑</span> Clear Data
+        </button>
         <button onClick={onScrape} className="scrape-btn" style={{background:`linear-gradient(135deg,${C.teal},${C.violet})`,border:"none",borderRadius:6,padding:"6px 12px",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
           <span className="scrape-icon">⚡</span> <span className="scrape-text">Run Scrape</span>
         </button>
