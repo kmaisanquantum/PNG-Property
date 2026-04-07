@@ -399,6 +399,7 @@ async def new_stealth_context(pw, headless: bool = True, session_file: Optional[
         timezone_id  = "Pacific/Port_Moresby",
         geolocation  = {"latitude": -9.4438, "longitude": 147.1803},
         permissions  = ["geolocation"],
+        ignore_https_errors = True,
         extra_http_headers={
             "Accept-Language": "en-US,en;q=0.9",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
