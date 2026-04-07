@@ -1,0 +1,13 @@
+[
+  {
+    "listing_id": "123",
+    "source_site": "Test",
+    "title": "Test Listing",
+    "price_raw": "K1000",
+    "price_monthly_k": 1000,
+    "price_confidence": "high",
+    "location": "Test Loc",
+    "listing_url": "http://test.com",
+    "is_verified": true
+  }
+]
