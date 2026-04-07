@@ -140,6 +140,8 @@ class Listing:
     title_status:    str = "Unknown / TBC"
     legal_flags:     list[str] = field(default_factory=list)
     group_id:        Optional[str] = None
+    investment_score: Optional[float] = 0.0
+    investment_flags: list[str] = field(default_factory=list)
     raw_text:        str            = ""
 
     def to_dict(self) -> dict:
