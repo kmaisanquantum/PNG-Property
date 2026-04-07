@@ -77,7 +77,7 @@ def deduplicate(listings: list[Listing]) -> list[Listing]:
 # ── export helpers ────────────────────────────────────────────────────────────
 
 def export_json(listings: list[Listing], path: Path) -> None:
-    data = [l.to_dict() for l in listings]
+    data = [l.to_dict() if hasattr(l, "to_dict") else l for l in listings]
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     log.info(f"JSON → {path}  ({len(data)} records)")
@@ -86,11 +86,12 @@ def export_json(listings: list[Listing], path: Path) -> None:
 def export_csv(listings: list[Listing], path: Path) -> None:
     if not listings:
         return
-    fields = list(listings[0].to_dict().keys())
+    first_item = listings[0].to_dict() if hasattr(listings[0], "to_dict") else listings[0]
+    fields = list(first_item.keys())
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
-        writer.writerows(l.to_dict() for l in listings)
+        writer.writerows(l.to_dict() if hasattr(l, "to_dict") else l for l in listings)
     log.info(f"CSV  → {path}  ({len(listings)} records)")
 
 
