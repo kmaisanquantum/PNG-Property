@@ -586,7 +586,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
-function Topbar({view, overview, onScrape, onLogout, loading, user}) {
+function Topbar({view, overview, onScrape, onLogout, onRefresh, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",valuation:"Property Valuation (AVM)",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources", settings: "Account Settings", lender: "Lender Portal", dev: "Developer Portal"};
   return (
     <div className="topbar" style={{height:48,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",flexShrink:0}}>
@@ -608,7 +608,7 @@ function Topbar({view, overview, onScrape, onLogout, loading, user}) {
         <button onClick={async () => {
           if (window.confirm("Clear all existing listing and analytics data? This cannot be undone.")) {
             const res = await apiFetch("/scrape/clear", { method: "POST" });
-            if (res) onLogout();
+            if (res && onRefresh) onRefresh();
           }
         }} className="clear-btn" style={{background:C.bg3, border:`1px solid ${C.red}`, borderRadius:6, padding:"6px 12px", color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5}}>
           <span style={{fontSize:12}}>🗑</span> Clear Data
@@ -1376,7 +1376,8 @@ function B2BView({ user }) {
 }
 
 function ValuationView() {
-  const [form, setForm] = useState({suburb:"Waigani", type:"House", bedrooms:3, sqm: 200});
+  const [form, setForm] = useState({suburb:"Waigani", property_type:"House", bedrooms:3, sqm: 200, is_for_sale: true});
+  const [error, setError] = useState(null);
   const [estimate, setEstimate] = useState(null);
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -1384,12 +1385,30 @@ function ValuationView() {
 
   const getEstimate = async () => {
     setLoading(true);
-    const res = await apiFetch("/valuation/estimate", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(form)
-    });
-    setEstimate(res);
+    setError(null);
+    setEstimate(null);
+
+    // Clean payload for Pydantic (empty string -> null)
+    const payload = {
+      ...form,
+      bedrooms: form.bedrooms === "" ? null : Number(form.bedrooms),
+      sqm: form.sqm === "" ? null : Number(form.sqm)
+    };
+
+    try {
+      const res = await apiFetch("/valuation/estimate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+      if (res && !res.error) {
+        setEstimate(res);
+      } else {
+        setError(res?.error || "Unable to calculate estimate with current data.");
+      }
+    } catch (err) {
+      setError("Server error. Please try again later.");
+    }
     setLoading(false);
   };
 
@@ -1429,6 +1448,14 @@ function ValuationView() {
          <Card style={{padding:16, height:'fit-content'}}>
             <div style={{fontSize:11, color:C.teal, fontFamily:"'IBM Plex Mono'", marginBottom:16, letterSpacing:'0.1em'}}>VALUE MY HOME</div>
             <div style={{display:'flex', flexDirection:'column', gap:16}}>
+               {error && <div style={{background:C.red + '22', border:`1px solid ${C.red}44`, color:C.red, padding:10, borderRadius:8, fontSize:12, marginBottom:8}}>{error}</div>}
+               <div>
+                  <div style={{fontSize:10, color:C.text2, marginBottom:4}}>PURPOSE</div>
+                  <select value={form.is_for_sale ? "sale" : "rent"} onChange={e=>setForm({...form, is_for_sale: e.target.value === "sale"})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0, fontWeight:700}}>
+                     <option value="sale">FOR SALE</option>
+                     <option value="rent">FOR RENT</option>
+                  </select>
+               </div>
                <div>
                   <div style={{fontSize:10, color:C.text2, marginBottom:4}}>SUBURB</div>
                   <select value={form.suburb} onChange={e=>setForm({...form, suburb: e.target.value})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}}>
@@ -1437,18 +1464,18 @@ function ValuationView() {
                </div>
                <div>
                   <div style={{fontSize:10, color:C.text2, marginBottom:4}}>PROPERTY TYPE</div>
-                  <select value={form.type} onChange={e=>setForm({...form, type: e.target.value})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}}>
+                  <select value={form.property_type} onChange={e=>setForm({...form, property_type: e.target.value})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}}>
                      {TYPES.map(t=><option key={t} value={t}>{t}</option>)}
                   </select>
                </div>
                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
                   <div>
                      <div style={{fontSize:10, color:C.text2, marginBottom:4}}>BEDROOMS</div>
-                     <input type="number" value={form.bedrooms} onChange={e=>setForm({...form, bedrooms: Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}} />
+                     <input type="number" value={form.bedrooms} onChange={e=>setForm({...form, bedrooms: e.target.value === "" ? "" : Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}} />
                   </div>
                   <div>
                      <div style={{fontSize:10, color:C.text2, marginBottom:4}}>LAND SIZE (SQM)</div>
-                     <input type="number" value={form.sqm} onChange={e=>setForm({...form, sqm: Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}} />
+                     <input type="number" value={form.sqm} onChange={e=>setForm({...form, sqm: e.target.value === "" ? "" : Number(e.target.value)})} style={{width:'100%', background:C.bg3, border:`1px solid ${C.border}`, borderRadius:6, padding:8, color:C.text0}} />
                   </div>
                </div>
                <button onClick={getEstimate} style={{width:'100%', background:C.teal, color:C.bg0, border:'none', borderRadius:8, padding:12, fontWeight:700, marginTop:10}}>
@@ -1952,7 +1979,7 @@ export default function App() {
       <div className="app-shell" style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
         <div className="main-content" style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} loading={loading} user={user}/>
+          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} onRefresh={loadAll} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources} onNav={setView}/>}
             {view==="listings" &&<ListingsView/>}
