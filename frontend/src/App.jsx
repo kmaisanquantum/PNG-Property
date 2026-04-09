@@ -586,7 +586,7 @@ function Sidebar({active, onNav, onLogout, user}) {
 }
 
 // ── TOPBAR ────────────────────────────────────────────────────────────────────
-function Topbar({view, overview, onScrape, onLogout, loading, user}) {
+function Topbar({view, overview, onScrape, onLogout, onRefresh, loading, user}) {
   const viewLabels = {dashboard:"Dashboard",listings:"All Listings",heatmap:"Price Heatmap",analytics:"Analytics",notifications:"Alerts & Saved Searches",vault:"Bank-Ready Vault",valuation:"Property Valuation (AVM)",b2b:"Agent Intelligence",flags:"Flagged Listings",sources:"Market Sources", settings: "Account Settings", lender: "Lender Portal", dev: "Developer Portal"};
   return (
     <div className="topbar" style={{height:48,background:C.bg1,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",flexShrink:0}}>
@@ -608,7 +608,7 @@ function Topbar({view, overview, onScrape, onLogout, loading, user}) {
         <button onClick={async () => {
           if (window.confirm("Clear all existing listing and analytics data? This cannot be undone.")) {
             const res = await apiFetch("/scrape/clear", { method: "POST" });
-            if (res) onLogout();
+            if (res) onRefresh();
           }
         }} className="clear-btn" style={{background:C.bg3, border:`1px solid ${C.red}`, borderRadius:6, padding:"6px 12px", color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5}}>
           <span style={{fontSize:12}}>🗑</span> Clear Data
@@ -1952,7 +1952,7 @@ export default function App() {
       <div className="app-shell" style={{display:"flex",height:"100vh",overflow:"hidden"}}>
         <Sidebar active={view} onNav={setView} onLogout={handleLogout} user={user}/>
         <div className="main-content" style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} loading={loading} user={user}/>
+          <Topbar view={view} overview={overview} onScrape={()=>setShowScrape(true)} onLogout={handleLogout} onRefresh={loadAll} loading={loading} user={user}/>
           <div style={{flex:1,overflow:"auto",padding:20}}>
             {view==="dashboard"&&<DashboardView overview={overview} heatmap={heatmap} trends={trends} sd={sd} sources={sources} onNav={setView}/>}
             {view==="listings" &&<ListingsView/>}
