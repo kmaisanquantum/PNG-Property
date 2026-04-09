@@ -608,7 +608,7 @@ function Topbar({view, overview, onScrape, onLogout, onRefresh, loading, user}) 
         <button onClick={async () => {
           if (window.confirm("Clear all existing listing and analytics data? This cannot be undone.")) {
             const res = await apiFetch("/scrape/clear", { method: "POST" });
-            if (res && onRefresh) onRefresh();
+            if (res) onRefresh();
           }
         }} className="clear-btn" style={{background:C.bg3, border:`1px solid ${C.red}`, borderRadius:6, padding:"6px 12px", color:C.red, fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5}}>
           <span style={{fontSize:12}}>🗑</span> Clear Data
