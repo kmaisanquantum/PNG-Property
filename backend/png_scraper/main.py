@@ -201,7 +201,7 @@ async def run_all(
             instance_tasks.append((cfg.source_site, GeneralAgencyScraper(cfg, headless=headless)))
 
     # ── Facebook ────────────────────────────────────────────────────────────
-    if include_facebook and _want("facebook"):
+    if include_facebook :
         instance_tasks.append(("Facebook Marketplace", FacebookScraper(scroll_rounds=8, headless=headless)))
 
     # ── run all ─────────────────────────────────────────────────────────────
