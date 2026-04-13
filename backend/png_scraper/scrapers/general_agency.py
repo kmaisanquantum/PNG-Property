@@ -122,6 +122,9 @@ AGENCY_CONFIGS: list[SiteConfig] = [
     SiteConfig("Tuhava",               "https://tuhava.com/houses/",                      max_pages=2),
     SiteConfig("Credit Corporation Properties",          "https://creditcorpproperties.com/residential/",   max_pages=3),
     SiteConfig("Nambawan Super (Property)",       "https://www.nambawansuper.com.pg/investment/property-portfolio/", max_pages=2),
+    SiteConfig("LJ Hookers",           "https://ljhookerpng.com/for-rent/",               max_pages=5),
+    SiteConfig("Budget Real Estate",   "https://www.budgetre.com.pg/en/rent",             max_pages=5),
+    SiteConfig("Edai Town Estate",     "http://www.edaitown.com/price.html",              max_pages=2),
 ]
 
 
