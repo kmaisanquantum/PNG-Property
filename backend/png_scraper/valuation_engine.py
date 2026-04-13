@@ -18,6 +18,8 @@ def estimate_property_value(
     """
     Calculates an estimated market value based on similar historical listings.
     """
+    is_fallback = False
+
     # Filter for similar properties
     similar = [
         l for l in listings
@@ -32,7 +34,12 @@ def estimate_property_value(
         similar = [l for l in listings if l.get("suburb") == suburb and l.get("is_for_sale") == is_for_sale and l.get("price_monthly_k")]
 
     if not similar:
-        return {"error": "Insufficient data for this suburb", "confidence": 0}
+        # Global fallback if no suburb data exists
+        similar = [l for l in listings if l.get("is_for_sale") == is_for_sale and l.get("price_monthly_k")]
+        is_fallback = True
+
+    if not similar:
+        return {"error": "Insufficient data in entire database", "confidence": 0}
 
     # Feature matching weights
     # Bedrooms matching
@@ -63,14 +70,19 @@ def estimate_property_value(
     # Confidence based on sample size and match quality
     confidence = min(95, (len(matches) * 5) + (total_weight / len(matches)))
 
+    if is_fallback:
+        # Heavily penalize confidence for global fallbacks
+        confidence = min(20, confidence / 2)
+
     return {
         "estimate": int(estimate),
         "low_bound": int(estimate * 0.9),
         "high_bound": int(estimate * 1.1),
         "confidence": int(confidence),
         "sample_size": len(matches),
-        "suburb": suburb,
+        "suburb": suburb if not is_fallback else "National Average",
         "property_type": property_type,
+        "is_fallback": is_fallback,
         "comparables": [
             {"title": l.get("title"), "price": l.get("price_monthly_k"), "source": l.get("source_site")}
             for l in sorted(similar, key=lambda x: abs((x.get("bedrooms") or 0) - bedrooms))[:3]

@@ -28,7 +28,7 @@ async function apiFetch(path, opts = {}) {
 }
 
 // ── MOCK DATA (used when backend is offline) ──────────────────────────────────
-const SUBURBS = ["Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile"];
+const SUBURBS = ["Port Moresby","Lae","Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile"];
 const SOURCES = ["Hausples","The Professionals","Ray White PNG","Century 21 PNG","MarketMeri","Facebook Marketplace","SRE PNG"];
 const TYPES   = ["House","Apartment","Townhouse","Studio","Room","Compound"];
 
@@ -1376,7 +1376,7 @@ function B2BView({ user }) {
 }
 
 function ValuationView() {
-  const [form, setForm] = useState({suburb:"Waigani", property_type:"House", bedrooms:3, sqm: 200, is_for_sale: true});
+  const [form, setForm] = useState({suburb:"Port Moresby", property_type:"Apartment", bedrooms:3, sqm: 200, is_for_sale: true});
   const [error, setError] = useState(null);
   const [estimate, setEstimate] = useState(null);
   const [report, setReport] = useState(null);

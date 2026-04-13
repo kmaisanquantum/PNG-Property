@@ -29,10 +29,12 @@ def test_valuation_logic():
     print(f"  Fallback Estimate: K{res2['estimate']:,}")
     assert res2["estimate"] > 0
 
-    # Test case 3: Error for missing suburb
+    # Test case 3: Global fallback for missing suburb
     res3 = estimate_property_value(listings, "Gerehu", "House", 3, 200, True)
-    print(f"  Error handling: {res3.get('error')}")
-    assert "error" in res3
+    print(f"  Global fallback: {res3.get('suburb')}, Confidence: {res3.get('confidence')}%")
+    assert res3["suburb"] == "National Average"
+    assert res3["is_fallback"] is True
+    assert res3["confidence"] <= 20
 
 if __name__ == "__main__":
     try:
