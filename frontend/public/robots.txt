@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://png-property-dashboard.onrender.com/sitemap.xml
