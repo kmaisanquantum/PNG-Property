@@ -28,7 +28,7 @@ async function apiFetch(path, opts = {}) {
 }
 
 // ── MOCK DATA (used when backend is offline) ──────────────────────────────────
-const SUBURBS = ["Port Moresby","Lae","Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile"];
+const SUBURBS = ["Port Moresby","Lae","Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile","Konedobu","Edai Town","Tuhava","Kaugere","Sabama","Manu","Vada Vada","Taurama","5 Mile","Chinatown","East Boroko","7 Mile","9 Mile","Bomana","Laloki","Goldie","14 Mile","Sogeri","Erima","Rainbow","Baruni","Ensisi","June Valley"];
 const SOURCES = ["Hausples","The Professionals","Ray White PNG","Century 21 PNG","MarketMeri","Facebook Marketplace","SRE PNG"];
 const TYPES   = ["House","Apartment","Townhouse","Studio","Room","Compound"];
 
