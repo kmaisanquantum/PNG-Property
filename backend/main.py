@@ -89,19 +89,53 @@ SUBURB_COORDS = {
     "Eight Mile": {"lat": -9.4226, "lng": 147.2218},
     "Morata":    {"lat": -9.4086, "lng": 147.1887},
     "Erima":     {"lat": -9.4483, "lng": 147.1752},
+    "Konedobu":   {"lat": -9.4750, "lng": 147.1550},
+    "Edai Town":  {"lat": -9.3250, "lng": 147.1000},
+    "Tuhava":     {"lat": -9.3800, "lng": 147.0500},
+    "Kaugere":    {"lat": -9.4850, "lng": 147.1850},
+    "Sabama":     {"lat": -9.4800, "lng": 147.1950},
+    "Manu":       {"lat": -9.4750, "lng": 147.2050},
+    "Vada Vada":  {"lat": -9.4650, "lng": 147.2000},
+    "Taurama":    {"lat": -9.5100, "lng": 147.2200},
+    "5 Mile":     {"lat": -9.4550, "lng": 147.2000},
+    "Chinatown":  {"lat": -9.4450, "lng": 147.2100},
+    "East Boroko":{"lat": -9.4750, "lng": 147.2100},
+    "7 Mile":     {"lat": -9.4450, "lng": 147.2200},
+    "9 Mile":     {"lat": -9.4100, "lng": 147.2300},
+    "Bomana":     {"lat": -9.3700, "lng": 147.2400},
+    "Laloki":     {"lat": -9.3400, "lng": 147.2500},
+    "Goldie":     {"lat": -9.3000, "lng": 147.2700},
+    "14 Mile":    {"lat": -9.4200, "lng": 147.3500},
+    "Sogeri":     {"lat": -9.4200, "lng": 147.4200},
+    "Rainbow":    {"lat": -9.4100, "lng": 147.1500},
+    "Baruni":     {"lat": -9.4300, "lng": 147.1200},
+    "Ensisi":     {"lat": -9.4150, "lng": 147.1700},
+    "June Valley":{"lat": -9.4400, "lng": 147.1600},
 }
 
 BENCHMARKS = {
     "Waigani":4470,"Boroko":3150,"Gerehu":1880,"Gordons":5957,
     "Hohola":1600,"Tokarara":2275,"Koki":2900,"Badili":3325,
     "Six Mile":1450,"Eight Mile":1225,"Morata":1633,"Erima":2033,
+    "Konedobu":3500,"Edai Town":1500,"Tuhava":1200,"Kaugere":1100,
+    "Sabama":1100,"Manu":2200,"Vada Vada":1800,"Taurama":1400,
+    "5 Mile":2800,"Chinatown":3200,"East Boroko":3800,"7 Mile":2100,
+    "9 Mile":1600,"Bomana":1000,"Laloki":900,"Goldie":800,
+    "14 Mile":1200,"Sogeri":1500,"Rainbow":2400,"Baruni":1100,
+    "Ensisi":2600,"June Valley":1900,
 }
 
 # Suburb Pricing Tiers for Mock Data Generation
 TIERS = {
     "Gordons":1,"Waigani":1,"Badili":2,"Boroko":2,"Koki":2,
     "Tokarara":3,"Gerehu":3,"Hohola":3,"Morata":4,"Erima":4,
-    "Six Mile":4,"Eight Mile":4
+    "Six Mile":4,"Eight Mile":4,
+    "Konedobu":2,"Edai Town":4,"Tuhava":4,"Kaugere":4,
+    "Sabama":4,"Manu":3,"Vada Vada":3,"Taurama":4,
+    "5 Mile":2,"Chinatown":2,"East Boroko":2,"7 Mile":3,
+    "9 Mile":4,"Bomana":4,"Laloki":4,"Goldie":4,
+    "14 Mile":4,"Sogeri":4,"Rainbow":3,"Baruni":4,
+    "Ensisi":3,"June Valley":3,
 }
 BASES = [6000, 3500, 2000, 1200]
 
