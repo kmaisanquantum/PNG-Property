@@ -7,6 +7,9 @@ Automated Valuation Model (AVM): Estimates property value using scraped data.
 from typing import List, Dict, Any, Optional
 import statistics
 
+# Standard PNG Investment Yield (approx 8%)
+DEFAULT_YIELD = 0.08
+
 def estimate_property_value(
     listings: List[Dict],
     suburb: str,
@@ -17,10 +20,13 @@ def estimate_property_value(
 ) -> Dict[str, Any]:
     """
     Calculates an estimated market value based on similar historical listings.
+    Supports cross-category fallback (Rent <-> Sale) using yield conversion.
     """
     is_fallback = False
+    is_cross_category = False
+    is_global = False
 
-    # Filter for similar properties
+    # 1. Try specific match
     similar = [
         l for l in listings
         if l.get("suburb") == suburb
@@ -29,38 +35,86 @@ def estimate_property_value(
         and l.get("price_monthly_k")
     ]
 
+    # 2. Try broader suburb match (Same category)
     if not similar:
-        # Fallback to broader suburb data if specific type not found
-        similar = [l for l in listings if l.get("suburb") == suburb and l.get("is_for_sale") == is_for_sale and l.get("price_monthly_k")]
+        similar = [
+            l for l in listings
+            if l.get("suburb") == suburb
+            and l.get("is_for_sale") == is_for_sale
+            and l.get("price_monthly_k")
+        ]
+        if similar: is_fallback = True
 
+    # 3. Try cross-category match in SAME suburb
     if not similar:
-        # Global fallback if no suburb data exists
-        similar = [l for l in listings if l.get("is_for_sale") == is_for_sale and l.get("price_monthly_k")]
-        is_fallback = True
+        similar = [
+            l for l in listings
+            if l.get("suburb") == suburb
+            and l.get("is_for_sale") != is_for_sale
+            and l.get("price_monthly_k")
+        ]
+        if similar:
+            is_cross_category = True
+            is_fallback = True
+
+    # 4. Try global match (Same category)
+    if not similar:
+        similar = [
+            l for l in listings
+            if l.get("is_for_sale") == is_for_sale
+            and l.get("price_monthly_k")
+        ]
+        if similar:
+            is_fallback = True
+            is_global = True
+
+    # 5. Try global match (Cross category)
+    if not similar:
+        similar = [
+            l for l in listings
+            if l.get("is_for_sale") != is_for_sale
+            and l.get("price_monthly_k")
+        ]
+        if similar:
+            is_cross_category = True
+            is_fallback = True
+            is_global = True
 
     if not similar:
         return {"error": "Insufficient data in entire database", "confidence": 0}
 
     # Feature matching weights
-    # Bedrooms matching
     matches = []
     for s in similar:
         score = 100
+
+        # Bed matching
         s_beds = s.get("bedrooms") or 0
         if s_beds != bedrooms:
             score -= abs(s_beds - bedrooms) * 20
 
+        # SQM matching
         s_sqm = s.get("sqm")
         if sqm and s_sqm:
             diff_pct = abs(s_sqm - sqm) / sqm
             score -= diff_pct * 50
 
-        # Ensure a minimum score if data exists, so we always provide an estimate
-        score = max(5, score)
-        matches.append((s["price_monthly_k"], score))
+        # Type matching (if we lost it in fallbacks)
+        if s.get("property_type") != property_type:
+            score -= 30
 
-    if not matches:
-        return {"error": "No matching features found in this area", "confidence": 0}
+        # Price conversion if cross-category
+        price = s["price_monthly_k"]
+        if is_cross_category:
+            if is_for_sale:
+                # Rent -> Sale conversion: (Monthly Rent * 12) / Yield
+                price = (price * 12) / DEFAULT_YIELD
+            else:
+                # Sale -> Rent conversion: (Sale * Yield) / 12
+                price = (price * DEFAULT_YIELD) / 12
+
+        score = max(5, score)
+        matches.append((price, score))
 
     # Calculate weighted average
     total_weight = sum(m[1] for m in matches)
@@ -71,20 +125,28 @@ def estimate_property_value(
     confidence = min(95, (len(matches) * 5) + (total_weight / len(matches)))
 
     if is_fallback:
-        # Heavily penalize confidence for global fallbacks
-        confidence = min(20, confidence / 2)
+        # Penalize confidence for fallbacks
+        penalty = 0.5 if not is_cross_category else 0.3
+        if is_global: penalty *= 0.5
+        confidence = min(25, confidence * penalty)
 
     return {
         "estimate": int(estimate),
-        "low_bound": int(estimate * 0.9),
-        "high_bound": int(estimate * 1.1),
+        "low_bound": int(estimate * 0.85),
+        "high_bound": int(estimate * 1.15),
         "confidence": int(confidence),
         "sample_size": len(matches),
-        "suburb": suburb if not is_fallback else "National Average",
+        "suburb": suburb if not is_global else "National Average",
         "property_type": property_type,
         "is_fallback": is_fallback,
+        "is_cross_category": is_cross_category,
         "comparables": [
-            {"title": l.get("title"), "price": l.get("price_monthly_k"), "source": l.get("source_site")}
+            {
+                "title": l.get("title"),
+                "price": l.get("price_monthly_k"),
+                "source": l.get("source_site"),
+                "is_sale": l.get("is_for_sale")
+            }
             for l in sorted(similar, key=lambda x: abs((x.get("bedrooms") or 0) - bedrooms))[:3]
         ]
     }

@@ -1,8 +1,5 @@
 import sys
 import os
-import json
-
-# Add backend to path
 sys.path.append(os.path.join(os.getcwd(), 'backend'))
 
 from png_scraper.valuation_engine import estimate_property_value
@@ -34,14 +31,4 @@ def test_valuation_logic():
     print(f"  Global fallback: {res3.get('suburb')}, Confidence: {res3.get('confidence')}%")
     assert res3["suburb"] == "National Average"
     assert res3["is_fallback"] is True
-    assert res3["confidence"] <= 20
-
-if __name__ == "__main__":
-    try:
-        test_valuation_logic()
-        print("\n✅ Valuation Engine Verified!")
-    except Exception as e:
-        print(f"\n❌ Test Failed: {e}")
-        import traceback
-        traceback.print_exc()
-        exit(1)
+    assert res3["confidence"] <= 25
