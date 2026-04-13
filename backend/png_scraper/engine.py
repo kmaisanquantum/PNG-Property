@@ -267,16 +267,21 @@ def extract_sqm(text: str) -> Optional[float]:
 
 def detect_is_sale(text: str, url: str = "") -> bool:
     t = (text + " " + url).lower()
-    if any(kw in t for kw in ["for sale", "selling", "/sale/", "price on application", "poa"]):
-        # But exclude mentions of "not for sale" or "rent" if it's dominant
-        if "for rent" in t or "to let" in t or "/rent/" in t:
-            # If both, we might need a better heuristic, but usually URL or title is specific
-            if "/sale/" in t or "for sale" in t: return True
-            return False
-        return True
-    return False
+    url_l = url.lower()
 
-# ── listing factory helper ───────────────────────────────────────────────────
+    # 1. URL-based detection (High signal)
+    if "/sale/" in url_l: return True
+    if "/rent/" in url_l: return False
+
+    # 2. Strong keyword detection
+    if any(kw in t for kw in ["for sale", "selling", "price on application", "poa"]):
+        # Exclude if "rent" is also mentioned but "sale" is not in the title/url
+        if any(kw in t for kw in ["for rent", "to let", "/rent/"]):
+            # Heuristic: if "sale" is mentioned in the first 50 chars (likely title), it's a sale
+            return "sale" in t[:50] or "selling" in t[:50]
+        return True
+
+    return False
 
 def make_listing(
     source_site: str,
