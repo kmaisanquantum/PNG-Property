@@ -1202,12 +1202,12 @@ const RESOURCES_DATA = [
   {
     category: "Major Real Estate Agencies",
     items: [
-      { name: "LJ Hooker PNG", url: "https://www.ljhooker.com.pg", desc: "Established name, Port Moresby focus." },
+      { name: "LJ Hookers", url: "https://ljhookerpng.com/", desc: "Established name, Port Moresby focus." },
       { name: "Ray White PNG", url: "https://www.raywhitepng.com", desc: "Large residential and commercial portfolio." },
       { name: "Strickland Real Estate", url: "https://www.sre.com.pg", desc: "Sales and high-end property management." },
       { name: "The Professionals", url: "https://www.theprofessionals.com.pg", desc: "Broad listings including Lae market." },
       { name: "Century 21 Siule Real Estate", url: "https://www.c21.com.pg", desc: "Global brand agency in PNG." },
-      { name: "Budget Real Estate", url: "https://www.budgetrealestatepng.com", desc: "Mid-range and affordable housing." },
+      { name: "Budget Real Estate", url: "https://www.budgetre.com.pg/en", desc: "Mid-range and affordable housing." },
       { name: "Arthur Strachan", url: "https://www.arthurstrachan.com.pg", desc: "Go-to for Lae and Morobe Province." },
       { name: "DAC Real Estate", url: "https://www.dac.com.pg", desc: "Specialized property and management services." },
       { name: "Kenmok Real Estate", url: "http://www.kenmok.com.pg", desc: "100% PNG-owned firm (management/construction)." }
@@ -1219,7 +1219,7 @@ const RESOURCES_DATA = [
       { name: "Pacific Palms Property", url: "https://www.pacificpalmsproperty.com.pg", desc: "Steamships Group (commercial/industrial/residential)." },
       { name: "Credit Corporation Properties", url: "https://www.creditcorporation.com.pg/properties", desc: "High-end assets like Era Matana/Dorina." },
       { name: "Nambawan Super (Property)", url: "https://www.nambawansuper.com.pg/property", desc: "Large owner of various residential estates." },
-      { name: "Edai Town", url: "https://www.edaitown.com.pg", desc: "Large-scale residential development near POM." },
+      { name: "Edai Town Estate", url: "http://www.edaitown.com/", desc: "Large-scale residential development near POM." },
       { name: "Tuhava", url: "https://tuhava.com", desc: "Eco-friendly planned township and residential community." }
     ]
   }
