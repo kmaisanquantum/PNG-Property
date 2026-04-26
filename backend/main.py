@@ -926,7 +926,7 @@ def get_source_list(current_user: User = Depends(get_current_user)):
         "Hausples", "PNG Real Estate", "Marketmeri.com (Real Estate Section)", "PNG Buy n Rent",
         "LJ Hookers", "Ray White PNG", "Strickland Real Estate", "The Professionals",
         "Century 21 Siule Real Estate", "Budget Real Estate", "Arthur Strachan", "DAC Real Estate",
-        "Kenmok Real Estate", "Pacific Palms Property", "Credit Corporation Properties", "Nambawan Super (Property)",
+        "Kenmok Real Estate", "Pacific Palms Property", "Credit Corporation Properties", "Nambawan Super (Property)", "AAA Properties",
         "Edai Town Estate", "Tuhava", "Facebook Marketplace"
     ]}
 
