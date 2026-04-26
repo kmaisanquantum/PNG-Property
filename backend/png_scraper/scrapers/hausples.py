@@ -1,16 +1,7 @@
 """
 png_scraper/scrapers/hausples.py
 ─────────────────────────────────────────────────────────────────────────────
-HausplesScraper  —  Adaptive scraper for Hausples-powered portals:
-    • https://www.hausples.com.pg
-    • https://www.pngrealestate.com.pg
-    • https://www.pngbuynrent.com
-
-Strategy:
-    1. Navigate the /rent/ listing grid.
-    2. Wait for JS to render the property cards.
-    3. Extract card-level data (title, price, location, href).
-    4. Paginate via the "next page" button until exhausted.
+HausplesScraper  —  Adaptive scraper for Hausples-powered portals.
 """
 
 from __future__ import annotations
@@ -34,8 +25,6 @@ log = logging.getLogger("png_scraper.hausples")
 DEFAULT_BASE_URL = "https://www.hausples.com.pg"
 DEFAULT_SOURCE   = "Hausples"
 
-# ── selector groups (try in order until one matches) ─────────────────────────
-
 CARD_SELECTORS = [
     "article",
     "article.property-card",
@@ -48,10 +37,7 @@ CARD_SELECTORS = [
 TITLE_SELECTORS = [
     ".copy-wrapper .heading",
     "h2.property-card__title",
-    "h2[class*='title']",
-    "h3[class*='title']",
     ".listing-title",
-    "[data-testid='listing-title']",
     "h2",
     "h3",
 ]
@@ -60,19 +46,12 @@ PRICE_SELECTORS = [
     ".price .value",
     ".price",
     ".property-card__price",
-    "[class*='price']",
-    "[data-testid='property-price']",
     "span[class*='Price']",
-    "[class*='listing-price']",
 ]
 
 LOCATION_SELECTORS = [
     ".address",
     ".property-card__location",
-    "[class*='location']",
-    "[class*='suburb']",
-    "[class*='address']",
-    "[data-testid='property-location']",
     ".location",
 ]
 
@@ -80,62 +59,37 @@ LINK_SELECTORS = [
     "a.carousel-wrap",
     "a.property-card__link",
     "a[href*='/property/']",
-    "a[href*='/listing/']",
-    "a[href*='/rent/']",
-    "a[class*='card']",
     "a",
 ]
 
 NEXT_PAGE_SELECTORS = [
     "a[rel='next']",
     "a.next",
-    "a[aria-label='Next page']",
     "button[aria-label='Next']",
     ".pagination-next",
-    "[class*='pagination'] a:last-child",
-    "[data-testid='pagination-next']",
 ]
 
-
 async def _first_text(element, selectors: list[str]) -> str:
-    """Try each CSS selector, return the first non-empty inner_text."""
     for sel in selectors:
         try:
             el = await element.query_selector(sel)
             if el:
                 txt = (await el.inner_text()).strip()
-                if txt:
-                    return txt
-        except Exception:
-            pass
+                if txt: return txt
+        except Exception: pass
     return ""
 
-
 async def _first_attr(element, selectors: list[str], attr: str) -> str:
-    """Try each CSS selector, return the first non-empty attribute value."""
     for sel in selectors:
         try:
             el = await element.query_selector(sel)
             if el:
                 val = (await el.get_attribute(attr) or "").strip()
-                if val:
-                    return val
-        except Exception:
-            pass
+                if val: return val
+        except Exception: pass
     return ""
 
-
 class HausplesScraper(PNGScraper):
-    """
-    Dedicated scraper for Hausples-powered sites (React SPA).
-
-    Features:
-    • Multiple fallback card selectors
-    • Automatic pagination
-    • Lazy-load scroll trigger
-    • Block image/font requests for speed
-    """
-
     IS_VERIFIED = True
 
     def __init__(self, base_url: str = DEFAULT_BASE_URL, source_site: str = DEFAULT_SOURCE, max_pages: int = 5, headless: bool = True, mode: str = "rent"):
@@ -143,30 +97,22 @@ class HausplesScraper(PNGScraper):
         self.base_url = base_url.rstrip("/")
         self.SOURCE_SITE = source_site
         self.max_pages = max_pages
-        self.mode = mode # "rent" or "sale"
+        self.mode = mode
 
     async def _parse_card(self, card) -> Optional[Listing]:
-        """Extract one Listing from a Hausples property card element."""
         title    = await _first_text(card, TITLE_SELECTORS)
         price_r  = await _first_text(card, PRICE_SELECTORS)
         location = await _first_text(card, LOCATION_SELECTORS)
         href     = await _first_attr(card, LINK_SELECTORS, "href")
 
-        if not href:
-            return None
+        if not href: return None
         url = href if href.startswith("http") else f"{self.base_url}{href}"
+        raw_text = await card.inner_text()
 
-        # Pull any additional text for suburb / bedroom detection
-        raw_text = await _first_text(card, ["*"])   # full card text
-
-        # If title is still missing (often the case with current Hausples structure)
-        # try to infer it from the URL or first bold text
         if not title:
-            # e.g. /rent/town/portlock-road-30898/ -> "Portlock Road 30898"
             slug = href.strip("/").split("/")[-1]
             title = slug.replace("-", " ").title() if slug else f"{self.SOURCE_SITE} Listing"
 
-        # The location often contains a pin icon (), let's clean it
         if location:
             location = location.replace("", "").strip()
 
@@ -186,37 +132,32 @@ class HausplesScraper(PNGScraper):
         seen_ids: set[str] = set()
         base_search_url = f"{self.base_url}/{self.mode}/"
 
-        # Block heavy assets we don't need
-        await page.route(
-            "**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf,otf,eot}",
-            lambda r: r.abort()
-        )
+        await page.route("**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf}", lambda r: r.abort())
 
         for page_num in range(1, self.max_pages + 1):
             url = base_search_url if page_num == 1 else f"{base_search_url}?page={page_num}"
             log.info(f"[{self.SOURCE_SITE}] {self.mode.upper()} Page {page_num}/{self.max_pages} → {url}")
 
-            if not await self._goto(url):
+            if not await self._goto(url, wait_until="load"):
                 break
 
-            # Scroll to trigger lazy-loaded cards
+            # Wait for lazy content
+            await asyncio.sleep(3)
             await scroll_page(page, scrolls=random.randint(3, 5))
             await move_mouse(page)
 
-            # Detect which card selector works on this page
             cards = []
             for sel in CARD_SELECTORS:
                 try:
-                    await page.wait_for_selector(sel, timeout=12_000)
+                    await page.wait_for_selector(sel, timeout=15_000)
                     cards = await page.query_selector_all(sel)
                     if cards:
                         log.info(f"[{self.SOURCE_SITE}] Selector '{sel}' matched {len(cards)} cards")
                         break
-                except Exception:
-                    pass
+                except Exception: pass
 
             if not cards:
-                log.warning(f"[{self.SOURCE_SITE}] No cards found on page {page_num} — stopping pagination")
+                log.warning(f"[{self.SOURCE_SITE}] No cards found on page {page_num}")
                 break
 
             new_count = 0
@@ -224,10 +165,7 @@ class HausplesScraper(PNGScraper):
                 try:
                     listing = await self._parse_card(card)
                     if listing and listing.listing_id not in seen_ids:
-                        # Skip "New Developments" or Ads that don't look like listings
-                        if "/new-developments/" in listing.listing_url:
-                            continue
-
+                        if "/new-developments/" in listing.listing_url: continue
                         seen_ids.add(listing.listing_id)
                         results.append(listing)
                         new_count += 1
@@ -235,24 +173,18 @@ class HausplesScraper(PNGScraper):
                     log.debug(f"[{self.SOURCE_SITE}] Card parse error: {e}")
 
             log.info(f"[{self.SOURCE_SITE}] Running total: {len(results)} listings")
-            if on_progress:
-                on_progress(new_count, page_num)
+            if on_progress: on_progress(new_count, page_num)
 
-            # Check for next page
             has_next = False
             for sel in NEXT_PAGE_SELECTORS:
                 try:
                     btn = page.locator(sel).first
-                    if await btn.is_visible(timeout=3_000):
+                    if await btn.is_visible(timeout=2_000):
                         has_next = True
                         break
-                except Exception:
-                    pass
+                except Exception: pass
 
-            if not has_next:
-                log.info(f"[{self.SOURCE_SITE}] No next-page button found — pagination complete")
-                break
-
-            await sleep_human(2.0, 4.5)
+            if not has_next: break
+            await sleep_human(1.5, 3.5)
 
         return results
