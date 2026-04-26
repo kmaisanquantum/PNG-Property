@@ -1,22 +1,7 @@
 """
 png_scraper/scrapers/general_agency.py
 ─────────────────────────────────────────────────────────────────────────────
-GeneralAgencyScraper  —  Adaptive scraper for remaining PNG agency sites:
-
-    • https://marketmeri.com/real-estate
-    • http://www.sre.com.pg
-    • https://www.century21.com.pg
-    • https://www.raywhitepng.com
-    • http://www.pacificpalmsproperty.com.pg
-    • http://www.dac.com.pg
-    • http://www.aaaproperties.com.pg
-    • http://www.arthurstrachan.com.pg
-
-Strategy: Try a ranked cascade of generic CSS selectors that cover the
-most common real estate WordPress themes (RealHomes, Estatik, Easy
-Property Listings, WP Property, AgentPress Pro, etc.).
-
-If a site has a known quirk, override it via the SITE_OVERRIDES dict.
+GeneralAgencyScraper  —  Adaptive scraper for PNG agency sites.
 """
 
 from __future__ import annotations
@@ -41,18 +26,19 @@ log = logging.getLogger("png_scraper.general")
 # ── generic selector cascades ─────────────────────────────────────────────────
 
 GENERIC_CARD = [
-    "article.property-item",       # RealHomes
+    "article.property-item",
     "article[class*='property']",
     "div[class*='property-card']",
     "div[class*='listing-card']",
     ".listing-item",
     ".property-listing",
     "li.listing",
-    "div[class*='epl-listing']",   # Easy Property Listings
+    "div[class*='epl-listing']",
     "article[class*='listing']",
     "[data-component='PropertyCard']",
     ".rh_list_card",
-    "div.item",                    # generic last-resort
+    "div.item",
+    ".property-row",
 ]
 
 GENERIC_TITLE = [
@@ -61,7 +47,7 @@ GENERIC_TITLE = [
     "h2[itemprop='name']", "h3[itemprop='name']",
     "[class*='epl-listing-heading'] a",
     ".rh_list_card__heading a",
-    "h2 a", "h3 a",
+    "h1 a", "h2 a", "h3 a",
 ]
 
 GENERIC_PRICE = [
@@ -70,6 +56,7 @@ GENERIC_PRICE = [
     "[itemprop='price']", "[data-price]",
     ".rh_list_card__price",
     "span[class*='amount']", "p[class*='price']",
+    ".price-tag",
 ]
 
 GENERIC_LOCATION = [
@@ -104,27 +91,27 @@ class SiteConfig:
     start_url:      str
     is_verified:    bool = True
     max_pages:      int  = 5
-    card_selectors: list[str] = None    # None → use GENERIC_CARD
-    extra_wait_ms:  int  = 0           # additional wait after load (ms)
+    card_selectors: list[str] = None
+    extra_wait_ms:  int  = 0
     needs_scroll:   bool = True
 
 
 AGENCY_CONFIGS: list[SiteConfig] = [
-    SiteConfig("Marketmeri.com (Real Estate Section)",           "https://marketmeri.com/real-estate",              max_pages=8),
-    SiteConfig("Strickland Real Estate",              "http://www.sre.com.pg/rentals",                   max_pages=5),
-    SiteConfig("Century 21 Siule Real Estate",       "https://www.century21.com.pg/rent",               max_pages=5),
-    SiteConfig("Ray White PNG",        "https://www.raywhitepng.com/rent",                max_pages=5),
-    SiteConfig("Pacific Palms Property",        "http://www.pacificpalmsproperty.com.pg/rentals",  max_pages=4),
-    SiteConfig("DAC Real Estate",       "http://www.dac.com.pg/rentals",                   max_pages=4),
-    SiteConfig("AAA Properties",       "http://www.aaaproperties.com.pg/rent",            max_pages=4),
-    SiteConfig("Arthur Strachan",      "http://www.arthurstrachan.com.pg/rentals",        max_pages=4),
-    SiteConfig("Kenmok Real Estate",   "https://www.kenmok.com.pg/",                      max_pages=2),
-    SiteConfig("Tuhava",               "https://tuhava.com/houses/",                      max_pages=2),
-    SiteConfig("Credit Corporation Properties",          "https://creditcorpproperties.com/residential/",   max_pages=3),
-    SiteConfig("Nambawan Super (Property)",       "https://www.nambawansuper.com.pg/investment/property-portfolio/", max_pages=2),
-    SiteConfig("LJ Hookers",           "https://ljhookerpng.com/for-rent/",               max_pages=5),
-    SiteConfig("Budget Real Estate",   "https://www.budgetre.com.pg/en/rent",             max_pages=5),
-    SiteConfig("Edai Town Estate",     "http://www.edaitown.com/price.html",              max_pages=2),
+    SiteConfig("Marketmeri.com (Real Estate Section)", "https://marketmeri.com/real-estate", max_pages=8),
+    SiteConfig("Strickland Real Estate", "https://www.sre.com.pg/rentals", max_pages=5),
+    SiteConfig("Century 21 Siule Real Estate", "https://www.century21.com.pg/search/property-for-rent/", max_pages=5),
+    SiteConfig("Ray White PNG", "https://www.raywhitepng.com/properties/for-rent/", max_pages=5),
+    SiteConfig("Pacific Palms Property", "http://www.pacificpalmsproperty.com.pg/rentals", max_pages=4),
+    SiteConfig("DAC Real Estate", "http://www.dac.com.pg/rentals", max_pages=4),
+    SiteConfig("AAA Properties", "http://www.aaaproperties.com.pg/rent", max_pages=4),
+    SiteConfig("Arthur Strachan", "http://www.arthurstrachan.com.pg/rentals", max_pages=4),
+    SiteConfig("Kenmok Real Estate", "https://www.kenmok.com.pg/", max_pages=2),
+    SiteConfig("Tuhava", "https://tuhava.com/houses/", max_pages=2),
+    SiteConfig("Credit Corporation Properties", "https://creditcorpproperties.com/residential/", max_pages=3),
+    SiteConfig("Nambawan Super (Property)", "https://www.nambawansuper.com.pg/investment/property-portfolio/", max_pages=2),
+    SiteConfig("LJ Hookers", "https://ljhookerpng.com/for-rent/", max_pages=5),
+    SiteConfig("Budget Real Estate", "https://www.budgetre.com.pg/en/rent", max_pages=5),
+    SiteConfig("Edai Town Estate", "http://www.edaitown.com/price.html", max_pages=2),
 ]
 
 
@@ -136,10 +123,8 @@ async def _first_text(el, selectors: list[str]) -> str:
             child = await el.query_selector(sel)
             if child:
                 t = (await child.inner_text()).strip()
-                if t:
-                    return t
-        except Exception:
-            pass
+                if t: return t
+        except Exception: pass
     return ""
 
 async def _first_attr(el, selectors: list[str], attr: str) -> str:
@@ -148,10 +133,8 @@ async def _first_attr(el, selectors: list[str], attr: str) -> str:
             child = await el.query_selector(sel)
             if child:
                 v = (await child.get_attribute(attr) or "").strip()
-                if v:
-                    return v
-        except Exception:
-            pass
+                if v: return v
+        except Exception: pass
     return ""
 
 
@@ -164,16 +147,12 @@ async def _parse_card(card, cfg: SiteConfig, base_url: str) -> Optional[Listing]
     if not href:
         try:
             a = await card.query_selector("a[href]")
-            if a:
-                href = (await a.get_attribute("href") or "").strip()
-        except Exception:
-            pass
+            if a: href = (await a.get_attribute("href") or "").strip()
+        except Exception: pass
 
-    if not href:
-        return None
+    if not href: return None
 
     url = href if href.startswith("http") else f"{base_url.rstrip('/')}/{href.lstrip('/')}"
-
     if not title:
         title = f"Property — {location}" if location else f"{cfg.source_site} Listing"
 
@@ -191,14 +170,6 @@ async def _parse_card(card, cfg: SiteConfig, base_url: str) -> Optional[Listing]
 # ── single-site scraper ───────────────────────────────────────────────────────
 
 class GeneralAgencyScraper(PNGScraper):
-    """
-    Adaptive scraper for a single agency site defined by a SiteConfig.
-
-    Usage:
-        scraper = GeneralAgencyScraper(AGENCY_CONFIGS[0])   # MarketMeri
-        listings = await scraper.run()
-    """
-
     IS_VERIFIED = True
 
     def __init__(self, config: SiteConfig, headless: bool = True):
@@ -213,7 +184,6 @@ class GeneralAgencyScraper(PNGScraper):
         seen_ids: set[str] = set()
         card_sels = cfg.card_selectors or GENERIC_CARD
 
-        # Extract base URL for relative-URL resolution
         from urllib.parse import urlparse
         parsed   = urlparse(cfg.start_url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
@@ -221,17 +191,21 @@ class GeneralAgencyScraper(PNGScraper):
         await page.route("**/*.{png,jpg,jpeg,gif,webp,woff,woff2,ttf}", lambda r: r.abort())
 
         for page_num in range(1, cfg.max_pages + 1):
-            # Common WordPress pagination patterns
             if page_num == 1:
                 url = cfg.start_url
             else:
                 slash = "" if cfg.start_url.endswith("/") else "/"
                 url   = f"{cfg.start_url}{slash}page/{page_num}/"
 
-            log.info(f"[{cfg.source_site}] Page {page_num}/{cfg.max_pages} → {url}")
+            log.info(f"[{cfg.source_site}] Page {page_num} → {url}")
 
-            if not await self._goto(url):
-                break
+            success = await self._goto(url)
+            if not success and page_num > 1:
+                alt_url = f"{cfg.start_url}?page={page_num}"
+                log.info(f"[{cfg.source_site}] Retrying with alt pagination: {alt_url}")
+                success = await self._goto(alt_url)
+
+            if not success: break
 
             if cfg.extra_wait_ms:
                 await asyncio.sleep(cfg.extra_wait_ms / 1000)
@@ -241,27 +215,19 @@ class GeneralAgencyScraper(PNGScraper):
 
             await move_mouse(page)
 
-            # Detect working selector
             cards = []
             for sel in card_sels:
                 try:
-                    await page.wait_for_selector(sel, timeout=6_000)
+                    await page.wait_for_selector(sel, timeout=5_000)
                     candidates = await page.query_selector_all(sel)
                     if candidates:
                         log.info(f"[{cfg.source_site}] '{sel}' → {len(candidates)} cards")
                         cards = candidates
                         break
-                except Exception:
-                    pass
+                except Exception: pass
 
             if not cards:
                 log.warning(f"[{cfg.source_site}] No property cards found on page {page_num}")
-                # Dump page title for debugging
-                try:
-                    title_tag = await page.title()
-                    log.debug(f"[{cfg.source_site}] Page title: {title_tag}")
-                except Exception:
-                    pass
                 break
 
             new_count = 0
@@ -276,66 +242,37 @@ class GeneralAgencyScraper(PNGScraper):
                     log.debug(f"[{cfg.source_site}] Parse error: {e}")
 
             log.info(f"[{cfg.source_site}] Running total: {len(results)}")
-            if on_progress:
-                on_progress(new_count, page_num)
+            if on_progress: on_progress(new_count, page_num)
 
-            # Next page check
             has_next = False
             for sel in GENERIC_NEXT:
                 try:
                     loc = page.locator(sel).first
-                    if await loc.is_visible(timeout=2_000):
+                    if await loc.is_visible(timeout=1_500):
                         has_next = True
                         break
-                except Exception:
-                    pass
+                except Exception: pass
 
-            if not has_next:
-                log.info(f"[{cfg.source_site}] No next page — done")
-                break
-
-            await sleep_human(2.0, 5.0)
+            if not has_next: break
+            await sleep_human(1.5, 3.5)
 
         return results
-
-
-# ── multi-site runner ────────────────────────────────────────────────────────
 
 async def scrape_all_agencies(
     configs: list[SiteConfig] = None,
     headless: bool = True,
     concurrency: int = 3,
 ) -> list[Listing]:
-    """
-    Scrape all agency sites, running `concurrency` scrapers in parallel.
-
-    Args:
-        configs:     List of SiteConfig objects (defaults to AGENCY_CONFIGS)
-        headless:    Run Playwright headless
-        concurrency: Max simultaneous browser instances
-
-    Returns:
-        Flat list of all Listings across all sites
-    """
-    if configs is None:
-        configs = AGENCY_CONFIGS
-
+    if configs is None: configs = AGENCY_CONFIGS
     semaphore = asyncio.Semaphore(concurrency)
     all_results: list[Listing] = []
-
     async def _run_one(cfg: SiteConfig) -> list[Listing]:
         async with semaphore:
             scraper = GeneralAgencyScraper(cfg, headless=headless)
             return await scraper.run()
-
     tasks = [_run_one(cfg) for cfg in configs]
     batches = await asyncio.gather(*tasks, return_exceptions=True)
-
     for cfg, batch in zip(configs, batches):
-        if isinstance(batch, Exception):
-            log.error(f"[{cfg.source_site}] Failed: {batch}")
-        else:
-            log.info(f"[{cfg.source_site}] ✓ {len(batch)} listings")
-            all_results.extend(batch)
-
+        if isinstance(batch, Exception): log.error(f"[{cfg.source_site}] Failed: {batch}")
+        else: all_results.extend(batch)
     return all_results
