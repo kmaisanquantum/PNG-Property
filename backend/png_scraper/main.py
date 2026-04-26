@@ -52,23 +52,25 @@ def deduplicate(listings: list[Listing]) -> list[Listing]:
             continue
         seen_ids[lst.listing_id] = lst
 
-        # Fuzzy dedup
-        fuzzy_key = (
-            (lst.suburb or "").lower(),
-            lst.price_monthly_k,
-            (lst.property_type or "").lower(),
-            lst.bedrooms,
-        )
-        if fuzzy_key in seen_fuzzy:
-            existing = seen_fuzzy[fuzzy_key]
-            # Keep the verified/agency listing, discard social duplicate
-            if lst.is_verified and not existing.is_verified:
-                seen_fuzzy[fuzzy_key] = lst
-                unique = [l for l in unique if l.listing_id != existing.listing_id]
-                unique.append(lst)
-            continue
+        # Fuzzy dedup - but only for certain property types where it makes sense
+        # and ignore if data is missing
+        if lst.suburb and lst.price_monthly_k and lst.property_type:
+            fuzzy_key = (
+                (lst.suburb or "").lower(),
+                lst.price_monthly_k,
+                (lst.property_type or "").lower(),
+                lst.bedrooms,
+            )
+            if fuzzy_key in seen_fuzzy:
+                existing = seen_fuzzy[fuzzy_key]
+                # Keep the verified/agency listing, discard social duplicate
+                if lst.is_verified and not existing.is_verified:
+                    seen_fuzzy[fuzzy_key] = lst
+                    unique = [l for l in unique if l.listing_id != existing.listing_id]
+                    unique.append(lst)
+                continue
+            seen_fuzzy[fuzzy_key] = lst
 
-        seen_fuzzy[fuzzy_key] = lst
         unique.append(lst)
 
     return unique
@@ -147,12 +149,14 @@ async def run_all(
     def _want(name: str) -> bool:
         if sources is None: return True
         low_sources = [s.lower() for s in sources]
-        if name.lower() in low_sources: return True
+
+        # Exact match or partial match for sites with complex names (e.g. Marketmeri)
+        if any(s in name.lower() for s in low_sources): return True
 
         # Category handling
-        portals = ["hausples", "png real estate", "png buy n rent", "professionals"]
+        portals = ["hausples", "png real estate", "png buy n rent", "professionals", "the professionals"]
         if "portals" in low_sources and name.lower() in portals: return True
-        if "agencies" in low_sources and name.lower() not in portals and name.lower() != "facebook": return True
+        if "agencies" in low_sources and name.lower() not in portals and "facebook" not in name.lower(): return True
         return False
 
     # ── portals ────────────────────────────────────────────────────────────

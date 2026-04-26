@@ -29,7 +29,7 @@ async function apiFetch(path, opts = {}) {
 
 // ── MOCK DATA (used when backend is offline) ──────────────────────────────────
 const SUBURBS = ["Port Moresby","Lae","Waigani","Boroko","Gerehu","Gordons","Hohola","Tokarara","Koki","Badili","Six Mile","Eight Mile","Konedobu","Edai Town","Tuhava","Kaugere","Sabama","Manu","Vada Vada","Taurama","5 Mile","Chinatown","East Boroko","7 Mile","9 Mile","Bomana","Laloki","Goldie","14 Mile","Sogeri","Erima","Rainbow","Baruni","Ensisi","June Valley"];
-const SOURCES = ["Hausples","The Professionals","Ray White PNG","Century 21 PNG","MarketMeri","Facebook Marketplace","SRE PNG"];
+const SOURCES = ["Hausples", "PNG Real Estate", "Marketmeri.com (Real Estate Section)", "PNG Buy n Rent", "LJ Hookers", "Ray White PNG", "Strickland Real Estate", "The Professionals", "Century 21 Siule Real Estate", "Budget Real Estate", "Arthur Strachan", "DAC Real Estate", "Kenmok Real Estate", "Pacific Palms Property", "Credit Corporation Properties", "Nambawan Super (Property)", "AAA Properties", "Edai Town Estate", "Tuhava", "Facebook Marketplace"];
 const TYPES   = ["House","Apartment","Townhouse","Studio","Room","Compound"];
 
 function randRange(lo, hi) { return Math.floor(Math.random() * (hi - lo)) + lo; }
@@ -496,6 +496,11 @@ function ScrapePanel({onClose, onRefresh}) {
         {!job ? <>
           <div style={{marginBottom:18}}>
             <div style={{fontSize:11,color:C.text2,marginBottom:8,fontFamily:"'IBM Plex Mono'"}}>SOURCES</div>
+
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+              <Pill active={sources.includes("portals")} onClick={()=>toggleSrc("portals")}>+ All Portals</Pill>
+              <Pill active={sources.includes("agencies")} onClick={()=>toggleSrc("agencies")}>+ All Agencies</Pill>
+            </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               {srcList.map(([k,label])=><Pill key={k} active={sources.includes(k)} onClick={()=>toggleSrc(k)}>{label}</Pill>)}
             </div>
@@ -698,6 +703,11 @@ function ListingsView({suburbFilter}) {
   const [mvFilter, setMvFilter] = useState("");
   const [sort, setSort] = useState("scraped_at");
 
+  const [allSources, setAllSources] = useState(SOURCES);
+  useEffect(() => {
+    apiFetch("/sources").then(data => { if(data && data.sources) setAllSources(data.sources); });
+  }, []);
+
   const load = useCallback(async()=>{
     setLoading(true);
     const q=new URLSearchParams({page,limit:25,sort,order:"desc"});
@@ -787,7 +797,7 @@ function ListingsView({suburbFilter}) {
         </select>
         <select value={source} onChange={e=>setSource(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:source?C.teal:C.text1,fontSize:12,cursor:"pointer"}}>
           <option value="">All Sources</option>
-          {SOURCES.map(s=><option key={s} value={s}>{s}</option>)}
+          {allSources.map(s=><option key={s} value={s}>{s}</option>)}
         </select>
         <select value={type} onChange={e=>setType(e.target.value)} style={{background:C.bg3,border:`1px solid ${C.border}`,borderRadius:6,padding:"6px 10px",color:type?C.teal:C.text1,fontSize:12,cursor:"pointer"}}>
           <option value="">All Types</option>
