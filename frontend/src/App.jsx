@@ -441,7 +441,7 @@ function ScrapePanel({onClose, onRefresh}) {
     apiFetch("/config/status").then(d => { if(d) setConfig(d); });
   }, []);
 
-  const [sources, setSources] = useState(["hausples","professionals","agencies"]);
+  const [sources, setSources] = useState(["hausples","professionals"]);
   const [pages, setPages] = useState(3);
   const [includeFb, setIncludeFb] = useState(false);
   const [job, setJob] = useState(null);
@@ -483,7 +483,7 @@ function ScrapePanel({onClose, onRefresh}) {
     return ()=>clearInterval(pollRef.current);
   },[polling,job?.job_id]);
 
-  const srcList = [["hausples","Hausples"],["professionals","The Professionals"],["agencies","All Agencies"],["portals","All Portals"],["facebook","Facebook"]];
+  const srcList = [["hausples","Hausples"],["professionals","The Professionals"],["png real estate","PNG Real Estate"],["png buy n rent","PNG Buy n Rent"],["marketmeri.com (real estate section)","Marketmeri"],["strickland real estate","Strickland"],["century 21 siule real estate","Century 21"],["ray white png","Ray White"],["pacific palms property","Pacific Palms"],["dac real estate","DAC Real Estate"],["aaa properties","AAA Properties"],["arthur strachan","Arthur Strachan"],["kenmok real estate","Kenmok"],["tuhava","Tuhava"],["credit corporation properties","Credit Corp"],["nambawan super (property)","Nambawan"],["lj hookers","LJ Hookers"],["budget real estate","Budget RE"],["edai town estate","Edai Town"],["facebook","Facebook"]];
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
@@ -535,7 +535,6 @@ function ScrapePanel({onClose, onRefresh}) {
     </div>
   );
 }
-
 // ── SIDEBAR NAV ───────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   {id:"dashboard", icon:"◈", label:"Dashboard"},
