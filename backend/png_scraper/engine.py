@@ -18,6 +18,8 @@ from datetime import timezone, datetime
 from pathlib import Path
 from typing import Optional, Callable, Any
 
+from .normalizer import normalize
+
 log = logging.getLogger("png_scraper")
 
 _UA_POOL: list[str] = [
@@ -79,8 +81,17 @@ def detect_suburb(text: str) -> Optional[str]:
     return None
 
 def make_listing(source_site, title, price_raw, location, listing_url, is_verified, raw_text=""):
-    price_k, _, conf = normalise_price(price_raw)
+    # Use the sophisticated normalizer for high-quality data extraction
     combined = f"{title} {raw_text} {location}"
+    norm = normalize(combined)
+
+    # If the specialized normalizer didn't find a price but we have one from the scraper,
+    # fall back to the basic engine normalizer as a safety net.
+    price_k = norm['price_pgk_monthly']
+    conf = norm['price_confidence']
+    if not price_k and price_raw:
+        price_k, _, conf = normalise_price(price_raw)
+
     return Listing(
         listing_id      = hashlib.md5(f"{listing_url}:{price_raw}".encode()).hexdigest(),
         source_site     = source_site,
@@ -89,10 +100,14 @@ def make_listing(source_site, title, price_raw, location, listing_url, is_verifi
         price_monthly_k = price_k,
         price_confidence= conf,
         location        = location.strip(),
-        suburb          = detect_suburb(combined),
+        suburb          = norm['suburb'] or detect_suburb(combined),
         listing_url     = listing_url,
-        is_verified     = is_verified,
+        is_verified     = norm['is_verified'] or is_verified,
         raw_text        = raw_text[:400],
+        health_score    = norm['health_score'],
+        property_type   = norm['property_type'],
+        bedrooms        = norm['bedrooms'],
+        sqm             = norm['sqm']
     )
 
 async def sleep_human(lo=1.0, hi=3.0):
