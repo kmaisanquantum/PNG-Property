@@ -1,0 +1,10 @@
+.git
+node_modules
+frontend/node_modules
+backend/__pycache__
+output/*
+uploads/*
+data/*
+.pytest_cache
+*.png
+*.jpg
