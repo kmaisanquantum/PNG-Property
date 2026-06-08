@@ -2,7 +2,8 @@ FROM mcr.microsoft.com/playwright/python:v1.43.0-jammy
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers
 
 WORKDIR /app
 
@@ -15,8 +16,9 @@ RUN playwright install --with-deps chromium
 # Copy the rest of the application
 COPY . .
 
-# Ensure output directory exists
-RUN mkdir -p output
+# Ensure output and browser directories exist
+RUN mkdir -p output /app/pw-browsers && \
+    chmod -R 777 /app/pw-browsers
 
 # Expose the port the app runs on
 EXPOSE 8000

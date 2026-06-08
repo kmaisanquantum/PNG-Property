@@ -37,6 +37,8 @@ services:
         value: "*"
       - key: OUTPUT_FILE
         value: /app/data/png_listings_latest.json
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /app/pw-browsers
 
   # ── React Static Site ───────────────────────────────────────────────────────
   - type: static
