@@ -13,11 +13,6 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
 
-    disk:
-      name: png-data
-      mountPath: /app/data
-      sizeGB: 1
-
     envVars:
       - key: PORT
         value: "8000"
@@ -36,7 +31,7 @@ services:
       - key: ALLOWED_ORIGINS
         value: "*"
       - key: OUTPUT_FILE
-        value: /app/data/png_listings_latest.json
+        value: /app/output/png_listings_latest.json
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /app/pw-browsers
 
