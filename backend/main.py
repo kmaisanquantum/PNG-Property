@@ -25,7 +25,7 @@ from png_scraper.serpapi_client import get_serpapi_places
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(message)s")
 log = logging.getLogger("api")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7")
+SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET") or "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 43200 # 30 days
 
@@ -69,6 +69,7 @@ app.add_middleware(
 
 scrape_jobs: dict[str, dict] = {}
 OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", "output/png_listings_latest.json"))
+OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 HISTORY_FILE = Path(os.getenv("HISTORY_FILE", "output/suburb_history.json"))
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
@@ -1255,6 +1256,7 @@ def get_b2b_leads(current_user: User = Depends(get_current_user)):
 
 # ── serve built React SPA from backend (single-service mode) ─────────────────
 if STATIC_DIR.is_dir():
+    log.info("Serving static files from /app/static")
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR/"assets")), name="assets")
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str):

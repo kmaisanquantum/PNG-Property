@@ -24,7 +24,7 @@ WORKDIR /app
 # Install Python dependencies
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install --with-deps chromium
+RUN playwright install chromium
 
 # Copy backend source code
 COPY backend/ .
@@ -34,6 +34,7 @@ RUN rm -rf /app/static && mkdir -p /app/static
 COPY --from=frontend-builder /app/frontend/dist /app/static
 
 # Create directories for persistent data and logs
+# Moving this AFTER copy to ensure permissions on final structure
 RUN mkdir -p /app/output /app/uploads /app/data /app/pw-browsers && \
     chmod -R 777 /app/output /app/uploads /app/data /app/pw-browsers
 
@@ -41,4 +42,4 @@ RUN mkdir -p /app/output /app/uploads /app/data /app/pw-browsers && \
 EXPOSE 8000
 
 # Start the application using uvicorn
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
