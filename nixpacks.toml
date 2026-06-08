@@ -17,4 +17,4 @@ cmds = [
 ]
 
 [start]
-cmd = "export PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers && cd backend && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+cmd = "export PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers && export PYTHONPATH=/app/backend:/app && uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"
