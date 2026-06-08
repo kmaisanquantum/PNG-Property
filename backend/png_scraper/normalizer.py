@@ -281,9 +281,12 @@ def parse_property_type(text: str) -> Optional[str]:
 
 def parse_bedrooms(text: str) -> Optional[int]:
     patterns = [
-        r'(\d+)\s*(?:bed(?:room)?s?|br|bdrm)',
+        r'(\d+)\s*(?:-bed|bed|bedroom|br|bdrm|b/r)s?',
+        r'(\d+)\s*(?:x|X)\s*(?:bed|bedroom|br|bdrm|b/r)s?',
+        r'(?:bed|bedroom|br|bdrm|b/r)s?\s*[:\-]?\s*(\d+)',
+        r'(?:rooms|beds)\s*[:\-]?\s*(\d+)',
         r'(\d+)\s*b/r',
-        r'(?:bed(?:room)?s?|br|bdrm)\s*[:\-]?\s*(\d+)',
+        r'(\d+)\s*b/r',
     ]
     for p in patterns:
         m = re.search(p, text, re.IGNORECASE)
@@ -294,8 +297,10 @@ def parse_bedrooms(text: str) -> Optional[int]:
     return None
 
 def parse_sqm(text: str) -> Optional[float]:
-    pattern = r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|m2|m²|square\s*meters?)'
-    m = re.search(pattern, text, re.IGNORECASE)
+    # Normalize commas in numbers before parsing or use a better regex
+    t_clean = text.replace(',', '')
+    pattern = r'(\d+(?:\.\d+)?)\s*(?:sqm|sq\.m|m2|m²|square\s*meters?|sqr\s*mtrs?)'
+    m = re.search(pattern, t_clean, re.IGNORECASE)
     if m:
         try:
             val = float(m.group(1))
