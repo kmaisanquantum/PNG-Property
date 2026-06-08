@@ -16,7 +16,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     OUTPUT_FILE=/app/output/png_listings_latest.json \
-    HISTORY_FILE=/app/output/suburb_history.json
+    HISTORY_FILE=/app/output/suburb_history.json \
+    PLAYWRIGHT_BROWSERS_PATH=/app/pw-browsers
 
 WORKDIR /app
 
@@ -33,8 +34,8 @@ RUN rm -rf /app/static && mkdir -p /app/static
 COPY --from=frontend-builder /app/frontend/dist /app/static
 
 # Create directories for persistent data and logs
-RUN mkdir -p /app/output /app/uploads /app/data && \
-    chmod -R 777 /app/output /app/uploads /app/data
+RUN mkdir -p /app/output /app/uploads /app/data /app/pw-browsers && \
+    chmod -R 777 /app/output /app/uploads /app/data /app/pw-browsers
 
 # Expose the application port
 EXPOSE 8000
