@@ -1501,10 +1501,18 @@ function ValuationView() {
                         <div style={{fontSize:11, color:C.text2, fontFamily:"'IBM Plex Mono'", marginBottom:4}}>ESTIMATED MARKET VALUE</div>
                         <div style={{fontSize:36, fontWeight:800, color:C.text0}}>{fmt(estimate.estimate)}</div>
                         <div style={{fontSize:12, color:C.text1}}>Range: {fmt(estimate.low_bound)} – {fmt(estimate.high_bound)}</div>
+                        <div style={{display:'flex', gap:6, marginTop:8}}>
+                           {estimate.is_fallback && <Badge label="FALLBACK ACTIVE" color={C.amber} small />}
+                           {estimate.is_cross_category && <Badge label={form.is_for_sale ? "USING RENTAL DATA" : "USING SALES DATA"} color={C.teal} small />}
+                           {estimate.is_mismatched_type && <Badge label="BROAD TYPE MATCH" color={C.red} small />}
+                        </div>
                      </div>
                      <div style={{textAlign:'right'}}>
-                        <div style={{fontSize:24, fontWeight:800, color:estimate.confidence > 70 ? C.green : C.amber}}>{estimate.confidence}%</div>
+                        <div style={{fontSize:24, fontWeight:800, color:estimate.confidence > 60 ? C.green : estimate.confidence > 30 ? C.amber : C.red}}>{estimate.confidence}%</div>
                         <div style={{fontSize:9, color:C.text2}}>CONFIDENCE SCORE</div>
+                        {estimate.confidence < 30 && (
+                          <div style={{fontSize:8, color:C.red, fontWeight:700, marginTop:4, maxWidth:100}}>LOW DATA CONFIDENCE</div>
+                        )}
                      </div>
                   </div>
 
