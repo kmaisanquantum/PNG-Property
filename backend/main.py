@@ -68,13 +68,15 @@ app.add_middleware(
 )
 
 scrape_jobs: dict[str, dict] = {}
-OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", "output/png_listings_latest.json"))
+OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", (Path(__file__).parent.parent / "output" / "png_listings_latest.json").resolve()))
 OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-HISTORY_FILE = Path(os.getenv("HISTORY_FILE", "output/suburb_history.json"))
-UPLOAD_DIR = Path("uploads")
+HISTORY_FILE = Path(os.getenv("HISTORY_FILE", (Path(__file__).parent.parent / "output" / "suburb_history.json").resolve()))
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", (Path(__file__).parent.parent / "uploads").resolve()))
 UPLOAD_DIR.mkdir(exist_ok=True)
+DATA_DIR = Path(os.getenv("DATA_DIR", (Path(__file__).parent.parent / "data").resolve()))
+DATA_DIR.mkdir(exist_ok=True)
 
-STATIC_DIR = Path("static")
+STATIC_DIR = Path(__file__).parent / "static"
 
 # ── MARKET CONTEXT DATA ───────────────────────────────────────────────────────
 SUBURB_COORDS = {
@@ -1260,7 +1262,7 @@ def get_b2b_leads(current_user: User = Depends(get_current_user)):
 
 # ── serve built React SPA from backend (single-service mode) ─────────────────
 if STATIC_DIR.is_dir():
-    log.info("Serving static files from /app/static")
+    log.info(f"Serving static files from {STATIC_DIR.resolve()}")
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR/"assets")), name="assets")
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str):

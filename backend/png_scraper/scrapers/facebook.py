@@ -39,7 +39,7 @@ log = logging.getLogger("png_scraper.facebook")
 SOURCE_SITE   = "Facebook Marketplace"
 MARKETPLACE_URL = "https://www.facebook.com/marketplace/category/propertyrentals"
 LOGIN_URL       = "https://www.facebook.com/login"
-SESSION_FILE    = Path(os.getenv("FB_SESSION_PATH", "fb_session.json"))
+SESSION_FILE    = Path(os.getenv("FB_SESSION_PATH", (Path(__file__).parent.parent.parent.parent / "data" / "fb_session.json").resolve()))
 
 # Load FB credentials from environment (set in .env or CI secrets — never hardcode)
 FB_EMAIL    = os.getenv("FB_EMAIL", "")
