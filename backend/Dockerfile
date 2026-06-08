@@ -10,6 +10,7 @@ WORKDIR /app
 # Paths are now relative to the 'backend' directory
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN playwright install --with-deps chromium
 
 # Copy the rest of the application
 COPY . .
