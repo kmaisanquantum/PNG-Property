@@ -277,6 +277,10 @@ def create_user(user: UserCreate) -> UserInDB:
 
 @app.on_event("startup")
 async def startup_event():
+    # Ensure necessary directories exist
+    for d in ["output", "data", "uploads"]:
+        Path(d).mkdir(exist_ok=True)
+
     # Ensure admin user exists
     admin_email = "kmaisan@dspng.tech"
     admin_pass = "kilomike@2024"
